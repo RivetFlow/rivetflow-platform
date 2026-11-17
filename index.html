@@ -1,0 +1,480 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RivetFlow AI | Control Centre</title>
+<style>
+:root {
+  --bg:#0b1018;
+  --panel:#121b27;
+  --panel2:#182433;
+  --line:#263548;
+  --text:#f2f5f9;
+  --muted:#91a0b3;
+  --accent:#42d6a4;
+  --blue:#66aaff;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+button,input,select,textarea { font:inherit; }
+button { cursor:pointer; }
+.layout { display:flex; min-height:100vh; }
+.sidebar {
+  width:245px;
+  background:#0e1621;
+  border-right:1px solid var(--line);
+  padding:25px 16px;
+  flex-shrink:0;
+}
+.brand { font-size:22px; font-weight:800; letter-spacing:-.8px; }
+.brand span { color:var(--accent); }
+.brand-sub { color:var(--muted); font-size:10px; letter-spacing:2px; margin-top:5px; }
+.workspace {
+  margin-top:35px;
+  padding:13px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--panel);
+  font-size:13px;
+}
+.workspace small { display:block; color:var(--muted); margin-bottom:6px; }
+.nav-title {
+  color:#6e8095;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:1.5px;
+  margin:30px 10px 10px;
+}
+.nav button {
+  width:100%;
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  text-align:left;
+  padding:12px;
+  border-radius:8px;
+  margin:2px 0;
+}
+.nav button:hover,.nav button.active {
+  color:var(--text);
+  background:var(--panel2);
+}
+.nav button.active { border-left:3px solid var(--accent); }
+.sidebar-bottom {
+  margin-top:45px;
+  padding:13px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  font-size:12px;
+}
+.main { flex:1; min-width:0; }
+.topbar {
+  height:70px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 30px;
+  border-bottom:1px solid var(--line);
+}
+.topbar small { color:var(--muted); }
+.status { color:var(--accent); font-size:12px; }
+.content { padding:30px; max-width:1250px; margin:auto; }
+.page { display:none; }
+.page.active { display:block; }
+h1 { font-size:27px; margin:0 0 8px; letter-spacing:-.8px; }
+.subtitle { color:var(--muted); margin:0 0 27px; font-size:14px; }
+.grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:15px;
+}
+.card {
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:19px;
+}
+.metric-label { color:var(--muted); font-size:12px; }
+.metric { font-size:29px; font-weight:750; margin:13px 0 5px; }
+.metric-note { color:var(--accent); font-size:11px; }
+.section-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin:28px 0 14px;
+}
+h2 { font-size:17px; margin:0; }
+.btn {
+  background:var(--accent);
+  color:#07140f;
+  border:0;
+  border-radius:8px;
+  padding:11px 15px;
+  font-weight:750;
+  font-size:12px;
+}
+.btn.secondary {
+  color:var(--text);
+  background:var(--panel2);
+  border:1px solid var(--line);
+}
+.btn:active { transform:scale(.98); }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; min-width:560px; }
+th,td {
+  text-align:left;
+  padding:14px 12px;
+  border-bottom:1px solid var(--line);
+  font-size:12px;
+}
+th { color:var(--muted); font-weight:600; }
+td { color:#e2e9f1; }
+.pill {
+  display:inline-block;
+  padding:5px 9px;
+  border-radius:20px;
+  background:#203b35;
+  color:var(--accent);
+  font-size:10px;
+}
+.pill.blue { background:#20344d; color:var(--blue); }
+.pill.orange { background:#403522; color:#f2c16d; }
+.pill.grey { background:#28313c; color:#bac5d1; }
+.two-col {
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:15px;
+}
+.activity {
+  display:flex;
+  gap:12px;
+  padding:14px 0;
+  border-bottom:1px solid var(--line);
+  font-size:13px;
+}
+.dot {
+  width:9px;height:9px;border-radius:50%;
+  background:var(--accent);margin-top:4px;flex-shrink:0;
+}
+.activity small { display:block; color:var(--muted); margin-top:5px; }
+.assistant-box {
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:20px;
+  background:var(--panel);
+}
+.chat-log {
+  min-height:180px;
+  max-height:300px;
+  overflow:auto;
+  padding:12px;
+  background:#0c141e;
+  border-radius:8px;
+  margin:15px 0;
+}
+.message {
+  padding:11px 13px;
+  border-radius:9px;
+  margin:8px 0;
+  font-size:13px;
+  line-height:1.5;
+  max-width:90%;
+}
+.message.ai { background:#1b2d3b; }
+.message.user { background:#174c3c; margin-left:auto; }
+.field { margin:13px 0; }
+.field label { display:block; color:var(--muted); font-size:12px; margin-bottom:7px; }
+.field input,.field select,.field textarea,.chat-input {
+  width:100%;
+  padding:12px;
+  color:var(--text);
+  background:#0c141e;
+  border:1px solid var(--line);
+  border-radius:8px;
+  outline:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus {
+  border-color:var(--accent);
+}
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.notice {
+  background:#172a2a;
+  border:1px solid #285348;
+  color:#b6e9d8;
+  padding:15px;
+  border-radius:9px;
+  font-size:12px;
+  line-height:1.6;
+}
+.muted { color:var(--muted); font-size:12px; line-height:1.6; }
+.empty { color:var(--muted); padding:25px 10px; text-align:center; font-size:13px; }
+.footer-note { color:#718196; font-size:11px; margin-top:25px; }
+@media(max-width:850px) {
+  .sidebar { width:190px; }
+  .grid { grid-template-columns:repeat(2,1fr); }
+  .two-col { grid-template-columns:1fr; }
+  .content { padding:22px 16px; }
+  .topbar { padding:0 18px; }
+}
+@media(max-width:560px) {
+  .layout { display:block; }
+  .sidebar { width:100%; padding:14px; border-right:0; border-bottom:1px solid var(--line); }
+  .brand { font-size:19px; }
+  .workspace,.nav-title,.sidebar-bottom { display:none; }
+  .nav { display:flex; overflow-x:auto; gap:5px; margin-top:12px; }
+  .nav button { white-space:nowrap; width:auto; padding:10px; font-size:11px; }
+  .topbar { height:53px; }
+  .content { padding:22px 13px; }
+  .grid { gap:9px; }
+  .card { padding:13px; }
+  .metric { font-size:23px; }
+  .form-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+  <div class="brand">RIVET<span>FLOW</span></div>
+  <div class="brand-sub">INTELLIGENT BUSINESS SYSTEMS</div>
+  <div class="workspace">
+    <small>DEMO WORKSPACE</small>
+    <strong>Northstar Renovations</strong>
+  </div>
+  <div class="nav-title">WORKSPACE</div>
+  <nav class="nav">
+    <button class="active" data-page="overview">◫ Overview</button>
+    <button data-page="leads">♧ Leads</button>
+    <button data-page="assistant">✧ Website AI</button>
+    <button data-page="phone">◉ Phone AI</button>
+    <button data-page="settings">⚙ Settings</button>
+  </nav>
+  <div class="sidebar-bottom">
+    <strong>RivetFlow AI</strong><br>
+    Prototype environment<br><br>
+    <span class="pill">DEMO MODE</span>
+  </div>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <strong id="top-title">Overview</strong>
+  <small class="status">● SYSTEM ONLINE — DEMO</small>
+</header>
+
+<div class="content">
+<section class="page active" id="overview">
+  <h1>Good afternoon.</h1>
+  <p class="subtitle">Here's what's happening at Northstar Renovations.</p>
+  <div class="grid">
+    <div class="card"><div class="metric-label">Total leads</div><div class="metric" id="total-leads">3</div><div class="metric-note">Captured in demo</div></div>
+    <div class="card"><div class="metric-label">New inquiries</div><div class="metric" id="new-leads">2</div><div class="metric-note">Awaiting follow-up</div></div>
+    <div class="card"><div class="metric-label">Appointments</div><div class="metric">1</div><div class="metric-note">Demo appointment</div></div>
+    <div class="card"><div class="metric-label">AI availability</div><div class="metric">24/7</div><div class="metric-note">Simulation only</div></div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="section-head"><h2>Recent leads</h2><button class="btn secondary" onclick="showPage('leads')">View all</button></div>
+      <div class="card table-wrap">
+        <table><thead><tr><th>Customer</th><th>Service</th><th>Status</th></tr></thead><tbody id="overview-leads"></tbody></table>
+      </div>
+    </div>
+    <div>
+      <div class="section-head"><h2>Recent activity</h2></div>
+      <div class="card" id="activity-list">
+        <div class="activity"><span class="dot"></span><div>Demo workspace initialized<small>RivetFlow platform</small></div></div>
+        <div class="activity"><span class="dot"></span><div>Website assistant ready to test<small>Simulation mode</small></div></div>
+        <div class="activity"><span class="dot"></span><div>Lead management activated<small>Demo environment</small></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="footer-note">All figures and customer records on this screen are fictional demonstration data.</p>
+</section>
+
+<section class="page" id="leads">
+  <h1>Lead management</h1>
+  <p class="subtitle">Keep track of customer inquiries and follow-up progress.</p>
+  <div class="section-head">
+    <h2>Customer inquiries</h2>
+    <button class="btn" onclick="document.getElementById('lead-form').hidden=false">+ Add lead</button>
+  </div>
+  <div class="card" id="lead-form" hidden>
+    <h2>New customer lead</h2>
+    <div class="form-grid">
+      <div class="field"><label>Customer name</label><input id="lead-name" placeholder="Full name"></div>
+      <div class="field"><label>Email address</label><input id="lead-email" type="email" placeholder="customer@example.com"></div>
+      <div class="field"><label>Phone number</label><input id="lead-phone" placeholder="Phone number"></div>
+      <div class="field"><label>Service requested</label><input id="lead-service" placeholder="e.g. Roofing"></div>
+    </div>
+    <div class="field"><label>Inquiry details</label><textarea id="lead-details" rows="2" placeholder="What does the customer need?"></textarea></div>
+    <button class="btn" onclick="addLead()">Save lead</button>
+    <button class="btn secondary" onclick="document.getElementById('lead-form').hidden=true">Cancel</button>
+  </div>
+  <div class="card table-wrap" style="margin-top:15px">
+    <table>
+      <thead><tr><th>Customer</th><th>Service</th><th>Contact</th><th>Status</th><th>Update</th></tr></thead>
+      <tbody id="lead-table"></tbody>
+    </table>
+  </div>
+  <p class="footer-note">Prototype note: records are stored in this browser only. Do not enter real customer information.</p>
+</section>
+
+<section class="page" id="assistant">
+  <h1>Website AI assistant</h1>
+  <p class="subtitle">Test how a RivetFlow website assistant could greet and qualify a potential customer.</p>
+  <div class="two-col">
+    <div class="assistant-box">
+      <h2>Northstar customer chat</h2>
+      <p class="muted">This is a scripted demonstration, not a live AI connection.</p>
+      <div class="chat-log" id="chat-log">
+        <div class="message ai">Welcome to Northstar Renovations! How can we help with your home project today?</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="chat-input" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Assistant configuration</h2>
+      <div class="field"><label>Business name</label><input value="Northstar Renovations" disabled></div>
+      <div class="field"><label>Primary objective</label><input value="Capture and qualify new leads" disabled></div>
+      <div class="field"><label>Availability</label><input value="24 hours a day (planned)" disabled></div>
+      <div class="notice">Next development stage: connect a real AI model, business knowledge and secure lead storage.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="phone">
+  <h1>AI phone receptionist</h1>
+  <p class="subtitle">The future phone assistant for contractor businesses.</p>
+  <div class="two-col">
+    <div class="card">
+      <h2>Receptionist status</h2>
+      <div style="font-size:35px;margin:22px 0;color:var(--accent)">◉</div>
+      <span class="pill orange">SIMULATION — NOT CONNECTED</span>
+      <p class="muted" style="margin-top:18px">No phone number or calls are connected yet. We will test the call flow before considering a paid phone service.</p>
+      <button class="btn" onclick="simulateCall()">Test a sample call</button>
+      <div id="call-result" class="notice" style="margin-top:15px" hidden></div>
+    </div>
+    <div class="card">
+      <h2>Planned call handling</h2>
+      <div class="activity"><span class="dot"></span><div>Answer incoming calls<small>Greet the customer professionally</small></div></div>
+      <div class="activity"><span class="dot"></span><div>Understand the request<small>Identify service and urgency</small></div></div>
+      <div class="activity"><span class="dot"></span><div>Capture contact details<small>Ask permission to follow up</small></div></div>
+      <div class="activity"><span class="dot"></span><div>Send lead to dashboard<small>Make it available for review</small></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="settings">
+  <h1>Business settings</h1>
+  <p class="subtitle">Demo workspace details and platform information.</p>
+  <div class="card">
+    <div class="field"><label>Workspace name</label><input value="Northstar Renovations" disabled></div>
+    <div class="field"><label>Platform provider</label><input value="RivetFlow Technologies" disabled></div>
+    <div class="field"><label>Business website</label><input value="Demo workspace — not connected" disabled></div>
+    <div class="field"><label>Platform environment</label><input value="Early prototype" disabled></div>
+  </div>
+  <div class="notice" style="margin-top:16px">
+    Security reminder: this is a demonstration only. Authentication, tenant separation, encrypted storage, backups and production permissions must be implemented and tested before real customers use the platform.
+  </div>
+</section>
+</div>
+</main>
+</div>
+
+<script>
+const demoLeads = [
+ {name:"Michael Thompson",service:"Roof replacement",email:"michael@example.com",phone:"555-0101",status:"New"},
+ {name:"Sarah Wilson",service:"Kitchen renovation",email:"sarah@example.com",phone:"555-0102",status:"Contacted"},
+ {name:"David Martin",service:"Bathroom renovation",email:"david@example.com",phone:"555-0103",status:"Booked"}
+];
+let leads = [...demoLeads];
+
+function showPage(page) {
+ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+ document.getElementById(page).classList.add("active");
+ document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+ const names={overview:"Overview",leads:"Lead management",assistant:"Website AI",phone:"Phone AI",settings:"Settings"};
+ document.getElementById("top-title").textContent=names[page];
+}
+document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
+
+function statusClass(status) {
+ if(status==="New") return "pill";
+ if(status==="Booked") return "pill blue";
+ if(status==="Contacted") return "pill orange";
+ return "pill grey";
+}
+function renderLeads() {
+ document.getElementById("lead-table").innerHTML=leads.map((l,i)=>`
+ <tr>
+ <td><strong>${safe(l.name)}</strong></td>
+ <td>${safe(l.service)}</td>
+ <td>${safe(l.email||l.phone||"—")}</td>
+ <td><span class="${statusClass(l.status)}">${safe(l.status)}</span></td>
+ <td><select aria-label="Update lead status" onchange="updateStatus(${i},this.value)" style="background:#0c141e;color:white;border:1px solid #263548;padding:7px;border-radius:6px">
+ ${["New","Contacted","Booked","Closed"].map(s=>`<option ${l.status===s?"selected":""}>${s}</option>`).join("")}
+ </select></td>
+ </tr>`).join("");
+ document.getElementById("overview-leads").innerHTML=leads.slice(-4).reverse().map(l=>`
+ <tr><td>${safe(l.name)}</td><td>${safe(l.service)}</td><td><span class="${statusClass(l.status)}">${safe(l.status)}</span></td></tr>`).join("");
+ document.getElementById("total-leads").textContent=leads.length;
+ document.getElementById("new-leads").textContent=leads.filter(l=>l.status==="New").length;
+}
+function safe(value) {
+ return String(value||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function addLead() {
+ const name=document.getElementById("lead-name").value.trim();
+ const service=document.getElementById("lead-service").value.trim();
+ if(!name||!service) { alert("Please enter a customer name and service."); return; }
+ leads.push({
+  name,service,
+  email:document.getElementById("lead-email").value.trim(),
+  phone:document.getElementById("lead-phone").value.trim(),
+  details:document.getElementById("lead-details").value.trim(),
+  status:"New"
+ });
+ ["lead-name","lead-email","lead-phone","lead-service","lead-details"].forEach(id=>document.getElementById(id).value="");
+ document.getElementById("lead-form").hidden=true;
+ renderLeads();
+}
+function updateStatus(index,status) {
+ leads[index].status=status;
+ renderLeads();
+}
+function sendChat() {
+ const input=document.getElementById("chat-input");
+ const value=input.value.trim();
+ if(!value) return;
+ const log=document.getElementById("chat-log");
+ log.innerHTML+=`<div class="message user">${safe(value)}</div>`;
+ const lower=value.toLowerCase();
+ let reply="Thanks for reaching out! Could you tell me a little more about the project and the best way for our team to contact you?";
+ if(lower.includes("roof")) reply="We can help with roofing inquiries. Are you looking for a repair or a full roof replacement?";
+ else if(lower.includes("kitchen")) reply="We'd be happy to hear about your kitchen project. Are you planning a full renovation or a smaller update?";
+ else if(lower.includes("bath")) reply="Thanks! Is this a bathroom renovation, repair or new installation?";
+ else if(lower.includes("price")||lower.includes("cost")) reply="Every project is different. Our team would need a few details before preparing an estimate. What type of work are you considering?";
+ else if(lower.includes("hello")||lower.includes("hi")) reply="Hello! Thanks for contacting Northstar Renovations. What home improvement project can we help you with?";
+ log.innerHTML+=`<div class="message ai">${safe(reply)}</div>`;
+ input.value="";
+ log.scrollTop=log.scrollHeight;
+}
+function simulateCall() {
+ const result=document.getElementById("call-result");
+ result.hidden=false;
+ result.textContent="Sample call completed: the receptionist greeted the caller, identified a roofing inquiry and would ask for contact details and permission to follow up. No real call was placed.";
+}
+renderLeads();
+</script>
+</body>
+</html>
