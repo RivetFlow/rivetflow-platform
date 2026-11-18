@@ -241,14 +241,17 @@ td { color:#e2e9f1; }
 </style>
 </head>
 <body>
+
 <div class="layout">
 <aside class="sidebar">
   <div class="brand">RIVET<span>FLOW</span></div>
   <div class="brand-sub">INTELLIGENT BUSINESS SYSTEMS</div>
+
   <div class="workspace">
     <small>DEMO WORKSPACE</small>
     <strong>Northstar Renovations</strong>
   </div>
+
   <div class="nav-title">WORKSPACE</div>
   <nav class="nav">
     <button class="active" data-page="overview">◫ Overview</button>
@@ -257,6 +260,7 @@ td { color:#e2e9f1; }
     <button data-page="phone">◉ Phone AI</button>
     <button data-page="settings">⚙ Settings</button>
   </nav>
+
   <div class="sidebar-bottom">
     <strong>RivetFlow AI</strong><br>
     Prototype environment<br><br>
@@ -271,22 +275,48 @@ td { color:#e2e9f1; }
 </header>
 
 <div class="content">
+
 <section class="page active" id="overview">
   <h1>Good afternoon.</h1>
   <p class="subtitle">Here's what's happening at Northstar Renovations.</p>
+
   <div class="grid">
-    <div class="card"><div class="metric-label">Total leads</div><div class="metric" id="total-leads">3</div><div class="metric-note">Captured in demo</div></div>
-    <div class="card"><div class="metric-label">New inquiries</div><div class="metric" id="new-leads">2</div><div class="metric-note">Awaiting follow-up</div></div>
-    <div class="card"><div class="metric-label">Appointments</div><div class="metric">1</div><div class="metric-note">Demo appointment</div></div>
-    <div class="card"><div class="metric-label">AI availability</div><div class="metric">24/7</div><div class="metric-note">Simulation only</div></div>
+    <div class="card">
+      <div class="metric-label">Total leads</div>
+      <div class="metric" id="total-leads">0</div>
+      <div class="metric-note">Saved in demo database</div>
+    </div>
+    <div class="card">
+      <div class="metric-label">New inquiries</div>
+      <div class="metric" id="new-leads">0</div>
+      <div class="metric-note">Awaiting follow-up</div>
+    </div>
+    <div class="card">
+      <div class="metric-label">Appointments</div>
+      <div class="metric">0</div>
+      <div class="metric-note">Demo appointment tracking</div>
+    </div>
+    <div class="card">
+      <div class="metric-label">AI availability</div>
+      <div class="metric">24/7</div>
+      <div class="metric-note">Simulation only</div>
+    </div>
   </div>
+
   <div class="two-col">
     <div>
-      <div class="section-head"><h2>Recent leads</h2><button class="btn secondary" onclick="showPage('leads')">View all</button></div>
+      <div class="section-head">
+        <h2>Recent leads</h2>
+        <button class="btn secondary" onclick="showPage('leads')">View all</button>
+      </div>
       <div class="card table-wrap">
-        <table><thead><tr><th>Customer</th><th>Service</th><th>Status</th></tr></thead><tbody id="overview-leads"></tbody></table>
+        <table>
+          <thead><tr><th>Customer</th><th>Service</th><th>Status</th></tr></thead>
+          <tbody id="overview-leads"></tbody>
+        </table>
       </div>
     </div>
+
     <div>
       <div class="section-head"><h2>Recent activity</h2></div>
       <div class="card" id="activity-list">
@@ -296,16 +326,19 @@ td { color:#e2e9f1; }
       </div>
     </div>
   </div>
-  <p class="footer-note">All figures and customer records on this screen are fictional demonstration data.</p>
+
+  <p class="footer-note">All figures and customer records on this screen are demonstration data.</p>
 </section>
 
 <section class="page" id="leads">
   <h1>Lead management</h1>
   <p class="subtitle">Keep track of customer inquiries and follow-up progress.</p>
+
   <div class="section-head">
     <h2>Customer inquiries</h2>
     <button class="btn" onclick="document.getElementById('lead-form').hidden=false">+ Add lead</button>
   </div>
+
   <div class="card" id="lead-form" hidden>
     <h2>New customer lead</h2>
     <div class="form-grid">
@@ -318,18 +351,24 @@ td { color:#e2e9f1; }
     <button class="btn" onclick="addLead()">Save lead</button>
     <button class="btn secondary" onclick="document.getElementById('lead-form').hidden=true">Cancel</button>
   </div>
+
   <div class="card table-wrap" style="margin-top:15px">
     <table>
-      <thead><tr><th>Customer</th><th>Service</th><th>Contact</th><th>Status</th><th>Update</th></tr></thead>
+      <thead>
+        <tr><th>Customer</th><th>Service</th><th>Contact</th><th>Status</th><th>Update</th></tr>
+      </thead>
       <tbody id="lead-table"></tbody>
     </table>
+    <div id="empty-leads" class="empty" hidden>No leads saved yet. Add your first demo lead to get started.</div>
   </div>
-  <p class="footer-note">Prototype note: records are stored in this browser only. Do not enter real customer information.</p>
+
+  <p class="footer-note">Demo environment only. Do not enter real customer information until authentication and production security are implemented.</p>
 </section>
 
 <section class="page" id="assistant">
   <h1>Website AI assistant</h1>
   <p class="subtitle">Test how a RivetFlow website assistant could greet and qualify a potential customer.</p>
+
   <div class="two-col">
     <div class="assistant-box">
       <h2>Northstar customer chat</h2>
@@ -342,6 +381,7 @@ td { color:#e2e9f1; }
         <button class="btn" onclick="sendChat()">Send</button>
       </div>
     </div>
+
     <div class="card">
       <h2>Assistant configuration</h2>
       <div class="field"><label>Business name</label><input value="Northstar Renovations" disabled></div>
@@ -355,6 +395,7 @@ td { color:#e2e9f1; }
 <section class="page" id="phone">
   <h1>AI phone receptionist</h1>
   <p class="subtitle">The future phone assistant for contractor businesses.</p>
+
   <div class="two-col">
     <div class="card">
       <h2>Receptionist status</h2>
@@ -364,6 +405,7 @@ td { color:#e2e9f1; }
       <button class="btn" onclick="simulateCall()">Test a sample call</button>
       <div id="call-result" class="notice" style="margin-top:15px" hidden></div>
     </div>
+
     <div class="card">
       <h2>Planned call handling</h2>
       <div class="activity"><span class="dot"></span><div>Answer incoming calls<small>Greet the customer professionally</small></div></div>
@@ -377,16 +419,19 @@ td { color:#e2e9f1; }
 <section class="page" id="settings">
   <h1>Business settings</h1>
   <p class="subtitle">Demo workspace details and platform information.</p>
+
   <div class="card">
     <div class="field"><label>Workspace name</label><input value="Northstar Renovations" disabled></div>
     <div class="field"><label>Platform provider</label><input value="RivetFlow Technologies" disabled></div>
     <div class="field"><label>Business website</label><input value="Demo workspace — not connected" disabled></div>
     <div class="field"><label>Platform environment</label><input value="Early prototype" disabled></div>
   </div>
+
   <div class="notice" style="margin-top:16px">
     Security reminder: this is a demonstration only. Authentication, tenant separation, encrypted storage, backups and production permissions must be implemented and tested before real customers use the platform.
   </div>
 </section>
+
 </div>
 </main>
 </div>
@@ -396,39 +441,132 @@ const TENANT_ID = "northstar-demo";
 let leads = [];
 
 function showPage(page) {
- document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
- document.getElementById(page).classList.add("active");
- document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
- const names={overview:"Overview",leads:"Lead management",assistant:"Website AI",phone:"Phone AI",settings:"Settings"};
- document.getElementById("top-title").textContent=names[page];
+  const target = document.getElementById(page);
+  if (!target) return;
+
+  document.querySelectorAll(".page").forEach(p => {
+    p.classList.remove("active");
+  });
+
+  target.classList.add("active");
+
+  document.querySelectorAll(".nav button").forEach(button => {
+    button.classList.toggle("active", button.dataset.page === page);
+  });
+
+  const names = {
+    overview: "Overview",
+    leads: "Lead management",
+    assistant: "Website AI",
+    phone: "Phone AI",
+    settings: "Settings"
+  };
+
+  document.getElementById("top-title").textContent = names[page] || "RivetFlow";
 }
-document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
+
+document.querySelectorAll(".nav button").forEach(button => {
+  button.addEventListener("click", () => {
+    showPage(button.dataset.page);
+  });
+});
 
 function statusClass(status) {
- if(status==="New") return "pill";
- if(status==="Booked") return "pill blue";
- if(status==="Contacted") return "pill orange";
- return "pill grey";
+  if (status === "New") return "pill";
+  if (status === "Booked") return "pill blue";
+  if (status === "Contacted") return "pill orange";
+  return "pill grey";
 }
-function renderLeads() {
- document.getElementById("lead-table").innerHTML=leads.map((l,i)=>`
- <tr>
- <td><strong>${safe(l.name)}</strong></td>
- <td>${safe(l.service)}</td>
- <td>${safe(l.email||l.phone||"—")}</td>
- <td><span class="${statusClass(l.status)}">${safe(l.status)}</span></td>
- <td><select aria-label="Update lead status" onchange="updateStatus(${i},this.value)" style="background:#0c141e;color:white;border:1px solid #263548;padding:7px;border-radius:6px">
- ${["New","Contacted","Booked","Closed"].map(s=>`<option ${l.status===s?"selected":""}>${s}</option>`).join("")}
- </select></td>
- </tr>`).join("");
- document.getElementById("overview-leads").innerHTML=leads.slice(-4).reverse().map(l=>`
- <tr><td>${safe(l.name)}</td><td>${safe(l.service)}</td><td><span class="${statusClass(l.status)}">${safe(l.status)}</span></td></tr>`).join("");
- document.getElementById("total-leads").textContent=leads.length;
- document.getElementById("new-leads").textContent=leads.filter(l=>l.status==="New").length;
-}
+
 function safe(value) {
- return String(value||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  return String(value || "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[character]));
 }
+
+function renderLeads() {
+  const leadTable = document.getElementById("lead-table");
+  const overviewTable = document.getElementById("overview-leads");
+  const emptyMessage = document.getElementById("empty-leads");
+
+  if (!leadTable || !overviewTable) return;
+
+  leadTable.innerHTML = leads.map((lead, index) => `
+    <tr>
+      <td><strong>${safe(lead.name)}</strong></td>
+      <td>${safe(lead.service)}</td>
+      <td>${safe(lead.email || lead.phone || "—")}</td>
+      <td><span class="${statusClass(lead.status)}">${safe(lead.status)}</span></td>
+      <td>
+        <select
+          aria-label="Update lead status"
+          onchange="updateStatus(${index}, this.value)"
+          style="background:#0c141e;color:white;border:1px solid #263548;padding:7px;border-radius:6px"
+        >
+          ${["New", "Contacted", "Booked", "Closed"].map(status =>
+            `<option value="${status}" ${lead.status === status ? "selected" : ""}>${status}</option>`
+          ).join("")}
+        </select>
+      </td>
+    </tr>
+  `).join("");
+
+  overviewTable.innerHTML = leads.slice(-4).reverse().map(lead => `
+    <tr>
+      <td>${safe(lead.name)}</td>
+      <td>${safe(lead.service)}</td>
+      <td><span class="${statusClass(lead.status)}">${safe(lead.status)}</span></td>
+    </tr>
+  `).join("");
+
+  document.getElementById("total-leads").textContent = leads.length;
+
+  document.getElementById("new-leads").textContent =
+    leads.filter(lead => lead.status === "New").length;
+
+  if (emptyMessage) {
+    emptyMessage.hidden = leads.length !== 0;
+  }
+}
+
+async function loadLeads() {
+  try {
+    const response = await fetch(
+      `/api/leads?tenant_id=${encodeURIComponent(TENANT_ID)}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Could not load leads");
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      throw new Error("Unexpected response from database");
+    }
+
+    leads = data.map(lead => ({
+      id: lead.id,
+      name: lead.customer_name,
+      service: lead.service,
+      email: lead.email || "",
+      phone: lead.phone || "",
+      details: lead.message || "",
+      status: lead.status || "New"
+    }));
+
+    renderLeads();
+
+  } catch (error) {
+    console.error("Lead loading error:", error);
+    alert("We couldn't load saved leads. Please refresh and try again.");
+  }
+}
+
 async function addLead() {
   const name = document.getElementById("lead-name").value.trim();
   const service = document.getElementById("lead-service").value.trim();
@@ -461,24 +599,34 @@ async function addLead() {
       throw new Error("Could not save lead");
     }
 
-    ["lead-name", "lead-email", "lead-phone", "lead-service", "lead-details"]
-      .forEach(id => {
-        document.getElementById(id).value = "";
-      });
+    [
+      "lead-name",
+      "lead-email",
+      "lead-phone",
+      "lead-service",
+      "lead-details"
+    ].forEach(id => {
+      document.getElementById(id).value = "";
+    });
 
     document.getElementById("lead-form").hidden = true;
 
     await loadLeads();
+
   } catch (error) {
-    console.error(error);
+    console.error("Lead saving error:", error);
     alert("We couldn't save this lead. Please try again.");
   }
-});
- ["lead-name","lead-email","lead-phone","lead-service","lead-details"].forEach(id=>document.getElementById(id).value="");
- document.getElementById("lead-form").hidden=true;
- renderLeads();
 }
+
 async function updateStatus(index, status) {
+  const lead = leads[index];
+
+  if (!lead) {
+    alert("That lead could not be found.");
+    return;
+  }
+
   try {
     const response = await fetch("/api/leads", {
       method: "PATCH",
@@ -486,7 +634,7 @@ async function updateStatus(index, status) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        id: leads[index].id,
+        id: lead.id,
         tenant_id: TENANT_ID,
         status
       })
@@ -497,62 +645,57 @@ async function updateStatus(index, status) {
     }
 
     await loadLeads();
+
   } catch (error) {
-    console.error(error);
+    console.error("Lead update error:", error);
     alert("We couldn't update this lead's status.");
   }
 }
+
 function sendChat() {
- const input=document.getElementById("chat-input");
- const value=input.value.trim();
- if(!value) return;
- const log=document.getElementById("chat-log");
- log.innerHTML+=`<div class="message user">${safe(value)}</div>`;
- const lower=value.toLowerCase();
- let reply="Thanks for reaching out! Could you tell me a little more about the project and the best way for our team to contact you?";
- if(lower.includes("roof")) reply="We can help with roofing inquiries. Are you looking for a repair or a full roof replacement?";
- else if(lower.includes("kitchen")) reply="We'd be happy to hear about your kitchen project. Are you planning a full renovation or a smaller update?";
- else if(lower.includes("bath")) reply="Thanks! Is this a bathroom renovation, repair or new installation?";
- else if(lower.includes("price")||lower.includes("cost")) reply="Every project is different. Our team would need a few details before preparing an estimate. What type of work are you considering?";
- else if(lower.includes("hello")||lower.includes("hi")) reply="Hello! Thanks for contacting Northstar Renovations. What home improvement project can we help you with?";
- log.innerHTML+=`<div class="message ai">${safe(reply)}</div>`;
- input.value="";
- log.scrollTop=log.scrollHeight;
+  const input = document.getElementById("chat-input");
+  const value = input.value.trim();
+
+  if (!value) return;
+
+  const log = document.getElementById("chat-log");
+
+  log.innerHTML += `<div class="message user">${safe(value)}</div>`;
+
+  const lower = value.toLowerCase();
+
+  let reply = "Thanks for reaching out! Could you tell me a little more about the project and the best way for our team to contact you?";
+
+  if (lower.includes("roof")) {
+    reply = "We can help with roofing inquiries. Are you looking for a repair or a full roof replacement?";
+  } else if (lower.includes("kitchen")) {
+    reply = "We'd be happy to hear about your kitchen project. Are you planning a full renovation or a smaller update?";
+  } else if (lower.includes("bath")) {
+    reply = "Thanks! Is this a bathroom renovation, repair or new installation?";
+  } else if (lower.includes("price") || lower.includes("cost")) {
+    reply = "Every project is different. Our team would need a few details before preparing an estimate. What type of work are you considering?";
+  } else if (lower.includes("hello") || lower.includes("hi")) {
+    reply = "Hello! Thanks for contacting Northstar Renovations. What home improvement project can we help you with?";
+  }
+
+  log.innerHTML += `<div class="message ai">${safe(reply)}</div>`;
+
+  input.value = "";
+  log.scrollTop = log.scrollHeight;
 }
+
 function simulateCall() {
- const result=document.getElementById("call-result");
- result.hidden=false;
- result.textContent="Sample call completed: the receptionist greeted the caller, identified a roofing inquiry and would ask for contact details and permission to follow up. No real call was placed.";
+  const result = document.getElementById("call-result");
+
+  result.hidden = false;
+
+  result.textContent =
+    "Sample call completed: the receptionist greeted the caller, identified a roofing inquiry and would ask for contact details and permission to follow up. No real call was placed.";
 }
-renderLeads();
+
+// Load saved database records when the dashboard opens.
+loadLeads();
 </script>
+
 </body>
 </html>
-async function loadLeads() {
-  try {
-    const response = await fetch(
-      `/api/leads?tenant_id=${TENANT_ID}`
-    );
-
-    if (!response.ok) {
-      throw new Error("Could not load leads");
-    }
-
-    const data = await response.json();
-
-    leads = data.map(lead => ({
-      id: lead.id,
-      name: lead.customer_name,
-      service: lead.service,
-      email: lead.email || "",
-      phone: lead.phone || "",
-      details: lead.message || "",
-      status: lead.status || "New"
-    }));
-
-    renderLeads();
-  } catch (error) {
-    console.error(error);
-    alert("We couldn't load the saved leads. Please refresh and try again.");
-  }
-}
