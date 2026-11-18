@@ -392,12 +392,8 @@ td { color:#e2e9f1; }
 </div>
 
 <script>
-const demoLeads = [
- {name:"Michael Thompson",service:"Roof replacement",email:"michael@example.com",phone:"555-0101",status:"New"},
- {name:"Sarah Wilson",service:"Kitchen renovation",email:"sarah@example.com",phone:"555-0102",status:"Contacted"},
- {name:"David Martin",service:"Bathroom renovation",email:"david@example.com",phone:"555-0103",status:"Booked"}
-];
-let leads = [...demoLeads];
+const TENANT_ID = "northstar-demo";
+let leads = [];
 
 function showPage(page) {
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
@@ -433,24 +429,78 @@ function renderLeads() {
 function safe(value) {
  return String(value||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
-function addLead() {
- const name=document.getElementById("lead-name").value.trim();
- const service=document.getElementById("lead-service").value.trim();
- if(!name||!service) { alert("Please enter a customer name and service."); return; }
- leads.push({
-  name,service,
-  email:document.getElementById("lead-email").value.trim(),
-  phone:document.getElementById("lead-phone").value.trim(),
-  details:document.getElementById("lead-details").value.trim(),
-  status:"New"
- });
+async function addLead() {
+  const name = document.getElementById("lead-name").value.trim();
+  const service = document.getElementById("lead-service").value.trim();
+  const email = document.getElementById("lead-email").value.trim();
+  const phone = document.getElementById("lead-phone").value.trim();
+  const details = document.getElementById("lead-details").value.trim();
+
+  if (!name || !service) {
+    alert("Please enter a customer name and service.");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/leads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        tenant_id: TENANT_ID,
+        customer_name: name,
+        email,
+        phone,
+        service,
+        message: details
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Could not save lead");
+    }
+
+    ["lead-name", "lead-email", "lead-phone", "lead-service", "lead-details"]
+      .forEach(id => {
+        document.getElementById(id).value = "";
+      });
+
+    document.getElementById("lead-form").hidden = true;
+
+    await loadLeads();
+  } catch (error) {
+    console.error(error);
+    alert("We couldn't save this lead. Please try again.");
+  }
+});
  ["lead-name","lead-email","lead-phone","lead-service","lead-details"].forEach(id=>document.getElementById(id).value="");
  document.getElementById("lead-form").hidden=true;
  renderLeads();
 }
-function updateStatus(index,status) {
- leads[index].status=status;
- renderLeads();
+async function updateStatus(index, status) {
+  try {
+    const response = await fetch("/api/leads", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        id: leads[index].id,
+        tenant_id: TENANT_ID,
+        status
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Could not update lead");
+    }
+
+    await loadLeads();
+  } catch (error) {
+    console.error(error);
+    alert("We couldn't update this lead's status.");
+  }
 }
 function sendChat() {
  const input=document.getElementById("chat-input");
@@ -478,3 +528,31 @@ renderLeads();
 </script>
 </body>
 </html>
+async function loadLeads() {
+  try {
+    const response = await fetch(
+      `/api/leads?tenant_id=${TENANT_ID}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Could not load leads");
+    }
+
+    const data = await response.json();
+
+    leads = data.map(lead => ({
+      id: lead.id,
+      name: lead.customer_name,
+      service: lead.service,
+      email: lead.email || "",
+      phone: lead.phone || "",
+      details: lead.message || "",
+      status: lead.status || "New"
+    }));
+
+    loadLeads();
+  } catch (error) {
+    console.error(error);
+    alert("We couldn't load the saved leads. Please refresh and try again.");
+  }
+}
