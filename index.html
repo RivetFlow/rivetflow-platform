@@ -550,7 +550,7 @@ async function loadLeads() {
       status: lead.status || "New"
     }));
 
-    loadLeads();
+    renderLeads();
   } catch (error) {
     console.error(error);
     alert("We couldn't load the saved leads. Please refresh and try again.");
