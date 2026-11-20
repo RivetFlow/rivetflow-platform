@@ -1,4 +1,3 @@
-
 const ALLOWED_ORIGIN = "https://hoppscotch.io";
 
 function corsHeaders(request) {
