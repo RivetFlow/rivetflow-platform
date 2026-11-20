@@ -1,3 +1,4 @@
+
 const ALLOWED_ORIGIN = "https://hoppscotch.io";
 
 function corsHeaders(request) {
@@ -6,7 +7,7 @@ function corsHeaders(request) {
   const headers = {
     "Vary": "Origin",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400"
   };
 
@@ -28,27 +29,10 @@ export async function onRequestPost({ request, env }) {
   const headers = corsHeaders(request);
 
   try {
-    const expectedKey = env.RIVETFLOW_TEST_KEY;
-    const suppliedKey = request.headers.get("Authorization");
-
-    if (!expectedKey) {
+    if (!env.AI) {
       return Response.json(
-        { error: "Server configuration: test secret is missing." },
+        { error: "Workers AI binding is missing." },
         { status: 500, headers }
-      );
-    }
-
-    if (!suppliedKey) {
-      return Response.json(
-        { error: "Authorization header is missing." },
-        { status: 401, headers }
-      );
-    }
-
-    if (suppliedKey !== `Bearer ${expectedKey}`) {
-      return Response.json(
-        { error: "Authorization key does not match." },
-        { status: 401, headers }
       );
     }
 
@@ -70,11 +54,12 @@ export async function onRequestPost({ request, env }) {
     }
 
     const result = await env.AI.run(
-      "@cf/google/gemma-4-26b-a4b-it",
+      "@cf/zai-org/glm-4.7-flash",
       {
         prompt:
-          "You are RivetFlow AI, a helpful assistant for contractors. " +
-          "Give clear, practical answers.\n\n" +
+          "You are RivetFlow AI, an intelligent assistant " +
+          "for contractors. Give practical, clear and " +
+          "professional answers.\n\n" +
           "User message: " + message.trim()
       }
     );
@@ -89,7 +74,7 @@ export async function onRequestPost({ request, env }) {
 
   } catch (error) {
     return Response.json(
-      { error: "The AI request could not be completed." },
+      { error: "AI request failed. Check the Workers AI model and binding." },
       { status: 500, headers }
     );
   }
