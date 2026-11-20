@@ -7,500 +7,491 @@
 <title>RivetFlow AI | Control Centre</title>
 <style>
 :root {
-  --bg:#0b1018;--panel:#121b27;--panel2:#182433;
-  --line:#263548;--text:#f2f5f9;--muted:#91a0b3;
-  --accent:#42d6a4;--blue:#66aaff;
+  --bg:#0b1018;
+  --panel:#121b27;
+  --panel2:#182433;
+  --line:#263548;
+  --text:#f2f5f9;
+  --muted:#91a0b3;
+  --blue:#4d8dff;
+  --green:#35c98b;
+  --red:#ff6b6b;
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-button,input,select,textarea{font:inherit}
-button{cursor:pointer}
-.layout{display:flex;min-height:100vh}
-.sidebar{width:245px;background:#0e1621;border-right:1px solid var(--line);padding:25px 16px;flex-shrink:0}
-.brand{font-size:22px;font-weight:800;letter-spacing:-.8px}
-.brand span{color:var(--accent)}
-.brand-sub{color:var(--muted);font-size:10px;letter-spacing:2px;margin-top:5px}
-.workspace{margin-top:35px;padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:13px}
-.workspace small{display:block;color:var(--muted);margin-bottom:6px}
-.nav-title{color:#6e8095;font-size:10px;font-weight:700;letter-spacing:1.5px;margin:30px 10px 10px}
-.nav button{width:100%;border:0;background:transparent;color:var(--muted);text-align:left;padding:12px;border-radius:8px;margin:2px 0}
-.nav button:hover,.nav button.active{color:var(--text);background:var(--panel2)}
-.nav button.active{border-left:3px solid var(--accent)}
-.sidebar-bottom{margin-top:45px;padding:13px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
-.main{flex:1;min-width:0}
-.topbar{height:70px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;border-bottom:1px solid var(--line)}
-.topbar small{color:var(--muted)}
-.status{color:var(--accent);font-size:12px}
-.content{padding:30px;max-width:1250px;margin:auto}
-.page{display:none}
-.page.active{display:block}
-h1{font-size:27px;margin:0 0 8px;letter-spacing:-.8px}
-h2{font-size:17px;margin:0}
-.subtitle{color:var(--muted);margin:0 0 27px;font-size:14px}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:19px}
-.metric-label{color:var(--muted);font-size:12px}
-.metric{font-size:29px;font-weight:750;margin:13px 0 5px}
-.metric-note{color:var(--accent);font-size:11px}
-.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:28px 0 14px}
-.btn{background:var(--accent);color:#07140f;border:0;border-radius:8px;padding:11px 15px;font-weight:750;font-size:12px}
-.btn.secondary{color:var(--text);background:var(--panel2);border:1px solid var(--line)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:560px}
-th,td{text-align:left;padding:14px 12px;border-bottom:1px solid var(--line);font-size:12px}
-th{color:var(--muted);font-weight:600}
-td{color:#e2e9f1}
-.pill{display:inline-block;padding:5px 9px;border-radius:20px;background:#203b35;color:var(--accent);font-size:10px}
-.pill.blue{background:#20344d;color:var(--blue)}
-.pill.orange{background:#403522;color:#f2c16d}
-.pill.grey{background:#28313c;color:#bac5d1}
-.two-col{display:grid;grid-template-columns:1.2fr .8fr;gap:15px}
-.activity{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);font-size:13px}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--accent);margin-top:4px;flex-shrink:0}
-.activity small{display:block;color:var(--muted);margin-top:5px}
-.assistant-box{border:1px solid var(--line);border-radius:12px;padding:20px;background:var(--panel)}
-.chat-log{min-height:230px;max-height:390px;overflow:auto;padding:12px;background:#0c141e;border-radius:8px;margin:15px 0}
-.message{padding:11px 13px;border-radius:9px;margin:8px 0;font-size:13px;line-height:1.5;max-width:90%;white-space:pre-wrap;overflow-wrap:anywhere}
-.message.ai{background:#1b2d3b}
-.message.user{background:#174c3c;margin-left:auto}
-.field{margin:13px 0}
-.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}
-.field input,.field select,.field textarea,.chat-input{width:100%;padding:12px;color:var(--text);background:#0c141e;border:1px solid var(--line);border-radius:8px;outline:none}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.notice{background:#172a2a;border:1px solid #285348;color:#b6e9d8;padding:15px;border-radius:9px;font-size:12px;line-height:1.6}
-.muted{color:var(--muted);font-size:12px;line-height:1.6}
-.empty{color:var(--muted);padding:25px 10px;text-align:center;font-size:13px}
-.footer-note{color:#718196;font-size:11px;margin-top:25px}
-.chat-actions{display:flex;gap:8px;align-items:center}
-.chat-actions input{flex:1;min-width:0}
-.chat-status{font-size:11px;color:var(--muted);margin-top:10px}
-@media(max-width:850px){.sidebar{width:190px}.grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.content{padding:22px 16px}.topbar{padding:0 18px}}
-@media(max-width:560px){.layout{display:block}.sidebar{width:100%;padding:14px;border-right:0;border-bottom:1px solid var(--line)}.brand{font-size:19px}.workspace,.nav-title,.sidebar-bottom{display:none}.nav{display:flex;overflow-x:auto;gap:5px;margin-top:12px}.nav button{white-space:nowrap;width:auto;padding:10px;font-size:11px}.topbar{height:53px}.content{padding:22px 13px}.grid{gap:9px}.card{padding:13px}.metric{font-size:23px}.form-grid{grid-template-columns:1fr}}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+button,input,textarea { font:inherit; }
+.app { display:flex; min-height:100vh; }
+.sidebar {
+  width:230px;
+  background:#0e1621;
+  border-right:1px solid var(--line);
+  padding:25px 16px;
+  flex-shrink:0;
+}
+.logo { font-size:21px; font-weight:800; margin-bottom:8px; }
+.logo span { color:var(--blue); }
+.tagline { color:var(--muted); font-size:12px; margin-bottom:35px; }
+.nav button {
+  width:100%;
+  border:0;
+  color:var(--muted);
+  background:transparent;
+  text-align:left;
+  padding:13px;
+  border-radius:8px;
+  margin-bottom:5px;
+  cursor:pointer;
+}
+.nav button.active,.nav button:hover {
+  color:white;
+  background:var(--panel2);
+}
+.main { flex:1; min-width:0; padding:28px; }
+.topbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin-bottom:28px;
+}
+h1 { font-size:25px; margin:0 0 7px; }
+.subtitle { color:var(--muted); font-size:13px; }
+.status { color:var(--green); font-size:12px; }
+.page { display:none; }
+.page.active { display:block; }
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:15px;
+  margin-bottom:20px;
+}
+.card {
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:20px;
+  margin-bottom:16px;
+}
+.metric-label { color:var(--muted); font-size:13px; }
+.metric { font-size:28px; font-weight:700; margin-top:12px; }
+.section-title { font-size:17px; margin:0 0 15px; }
+.muted { color:var(--muted); font-size:13px; line-height:1.6; }
+button.primary {
+  background:var(--blue);
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:11px 16px;
+  cursor:pointer;
+}
+button.secondary {
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 14px;
+  cursor:pointer;
+}
+input,textarea {
+  width:100%;
+  background:#0c1420;
+  border:1px solid var(--line);
+  color:var(--text);
+  border-radius:8px;
+  padding:12px;
+  outline:none;
+}
+input:focus,textarea:focus { border-color:var(--blue); }
+.field { margin-bottom:12px; }
+label { display:block; color:var(--muted); font-size:12px; margin-bottom:7px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td {
+  text-align:left;
+  padding:12px 8px;
+  border-bottom:1px solid var(--line);
+}
+th { color:var(--muted); font-weight:500; }
+.chat-box {
+  height:390px;
+  overflow-y:auto;
+  background:#0c1420;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:16px;
+  margin-bottom:13px;
+}
+.message {
+  max-width:90%;
+  padding:12px 14px;
+  border-radius:10px;
+  margin-bottom:12px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  line-height:1.5;
+  font-size:14px;
+}
+.message.user {
+  background:#203b60;
+  margin-left:auto;
+}
+.message.ai { background:var(--panel2); }
+.chat-controls { display:flex; gap:9px; }
+.chat-controls input { flex:1; min-width:0; }
+.chat-note { margin-top:10px; }
+.badge {
+  display:inline-block;
+  background:#203b60;
+  color:#9fc2ff;
+  padding:5px 8px;
+  border-radius:20px;
+  font-size:11px;
+}
+.phone-demo {
+  border:1px solid var(--line);
+  background:#0c1420;
+  border-radius:10px;
+  padding:20px;
+}
+@media(max-width:700px) {
+  .app { display:block; }
+  .sidebar { width:100%; padding:15px; border-right:0; border-bottom:1px solid var(--line); }
+  .tagline { margin-bottom:12px; }
+  .nav { display:flex; overflow-x:auto; gap:5px; }
+  .nav button { width:auto; white-space:nowrap; margin:0; }
+  .main { padding:18px; }
+  .topbar { align-items:flex-start; }
+  .chat-box { height:350px; }
+}
 </style>
 </head>
 <body>
-<div class="layout">
+<div class="app">
+
 <aside class="sidebar">
-  <div class="brand">RIVET<span>FLOW</span></div>
-  <div class="brand-sub">INTELLIGENT BUSINESS SYSTEMS</div>
-  <div class="workspace"><small>DEMO WORKSPACE</small><strong>Northstar Renovations</strong></div>
-  <div class="nav-title">WORKSPACE</div>
+  <div class="logo">RivetFlow <span>AI</span></div>
+  <div class="tagline">Business Control Centre</div>
   <nav class="nav">
-    <button class="active" data-page="overview">◫ Overview</button>
-    <button data-page="leads">♧ Leads</button>
-    <button data-page="assistant">✧ Website AI</button>
-    <button data-page="phone">◉ Phone AI</button>
-    <button data-page="settings">⚙ Settings</button>
+    <button class="active" data-page="overview">Overview</button>
+    <button data-page="leads">Leads</button>
+    <button data-page="website">Website AI</button>
+    <button data-page="phone">Phone AI</button>
+    <button data-page="settings">Settings</button>
   </nav>
-  <div class="sidebar-bottom"><strong>RivetFlow AI</strong><br>Prototype environment<br><br><span class="pill">DEMO MODE</span></div>
 </aside>
 
 <main class="main">
-<header class="topbar">
-  <strong id="top-title">Overview</strong>
-  <small class="status">● SYSTEM ONLINE — DEMO</small>
-</header>
-
-<div class="content">
-<section class="page active" id="overview">
-  <h1>Good afternoon.</h1>
-  <p class="subtitle">Here's what's happening at Northstar Renovations.</p>
-  <div class="grid">
-    <div class="card"><div class="metric-label">Total leads</div><div class="metric" id="total-leads">0</div><div class="metric-note">Saved in demo database</div></div>
-    <div class="card"><div class="metric-label">New inquiries</div><div class="metric" id="new-leads">0</div><div class="metric-note">Awaiting follow-up</div></div>
-    <div class="card"><div class="metric-label">Appointments</div><div class="metric">0</div><div class="metric-note">Demo appointment tracking</div></div>
-    <div class="card"><div class="metric-label">AI availability</div><div class="metric">24/7</div><div class="metric-note">AI connection test</div></div>
-  </div>
-  <div class="two-col">
+  <header class="topbar">
     <div>
-      <div class="section-head"><h2>Recent leads</h2><button class="btn secondary" onclick="showPage('leads')">View all</button></div>
-      <div class="card table-wrap"><table><thead><tr><th>Customer</th><th>Service</th><th>Status</th></tr></thead><tbody id="overview-leads"></tbody></table></div>
+      <h1 id="pageTitle">Overview</h1>
+      <div class="subtitle">Northstar Renovations workspace</div>
     </div>
-    <div>
-      <div class="section-head"><h2>Recent activity</h2></div>
-      <div class="card" id="activity-list">
-        <div class="activity"><span class="dot"></span><div>Demo workspace initialized<small>RivetFlow platform</small></div></div>
-        <div class="activity"><span class="dot"></span><div>AI endpoint connected<small>Cloudflare Workers AI</small></div></div>
-        <div class="activity"><span class="dot"></span><div>Lead management activated<small>Demo environment</small></div></div>
+    <div class="status">● System online</div>
+  </header>
+
+  <section class="page active" id="overview">
+    <div class="grid">
+      <div class="card">
+        <div class="metric-label">Total leads</div>
+        <div class="metric" id="leadCount">—</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">Website AI</div>
+        <div class="metric">Active</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">Phone AI</div>
+        <div class="metric">Demo</div>
       </div>
     </div>
-  </div>
-  <p class="footer-note">All figures and customer records on this screen are demonstration data.</p>
-</section>
-
-<section class="page" id="leads">
-  <h1>Lead management</h1>
-  <p class="subtitle">Keep track of customer inquiries and follow-up progress.</p>
-  <div class="section-head"><h2>Customer inquiries</h2><button class="btn" onclick="document.getElementById('lead-form').hidden=false">+ Add lead</button></div>
-  <div class="card" id="lead-form" hidden>
-    <h2>New customer lead</h2>
-    <div class="form-grid">
-      <div class="field"><label>Customer name</label><input id="lead-name" placeholder="Full name"></div>
-      <div class="field"><label>Email address</label><input id="lead-email" type="email" placeholder="customer@example.com"></div>
-      <div class="field"><label>Phone number</label><input id="lead-phone" placeholder="Phone number"></div>
-      <div class="field"><label>Service requested</label><input id="lead-service" placeholder="e.g. Roofing"></div>
+    <div class="card">
+      <h2 class="section-title">Welcome to RivetFlow AI</h2>
+      <p class="muted">Your business automation control centre. Manage incoming leads, test your website assistant and explore your AI receptionist.</p>
+      <button class="primary" onclick="showPage('website')">Open Website AI</button>
     </div>
-    <div class="field"><label>Inquiry details</label><textarea id="lead-details" rows="2" placeholder="What does the customer need?"></textarea></div>
-    <button class="btn" onclick="addLead()">Save lead</button>
-    <button class="btn secondary" onclick="document.getElementById('lead-form').hidden=true">Cancel</button>
-  </div>
-  <div class="card table-wrap" style="margin-top:15px">
-    <table><thead><tr><th>Customer</th><th>Service</th><th>Contact</th><th>Status</th><th>Update</th></tr></thead><tbody id="lead-table"></tbody></table>
-    <div id="empty-leads" class="empty" hidden>No leads saved yet. Add your first demo lead to get started.</div>
-  </div>
-  <p class="footer-note">Demo environment only. Do not enter real customer information until authentication and production security are implemented.</p>
-</section>
+    <div class="card">
+      <h2 class="section-title">Recent activity</h2>
+      <p class="muted" id="activity">Dashboard loaded. Ready for testing.</p>
+    </div>
+  </section>
 
-<section class="page" id="assistant">
-  <h1>Website AI assistant</h1>
-  <p class="subtitle">Your AI assistant, connected to the RivetFlow model.</p>
-  <div class="two-col">
-    <div class="assistant-box">
-      <h2>Northstar customer chat</h2>
-      <p class="muted">Ask questions about roofing, renovations, estimates or customer service. The AI generates responses in real time.</p>
-      <div class="chat-log" id="chat-log">
-        <div class="message ai">Welcome to Northstar Renovations! I'm the AI assistant. How can I help you with your home project today?</div>
+  <section class="page" id="leads">
+    <div class="card">
+      <h2 class="section-title">Add a lead</h2>
+      <div class="field">
+        <label for="leadName">Customer name</label>
+        <input id="leadName" placeholder="Customer name">
       </div>
-      <div class="chat-actions">
-        <input class="chat-input" id="chat-input" placeholder="Type your message..." autocomplete="off">
-        <button class="btn" id="chat-send" onclick="sendChat()">Send</button>
+      <div class="field">
+        <label for="leadEmail">Email address</label>
+        <input id="leadEmail" type="email" placeholder="customer@example.com">
       </div>
-      <div class="chat-status" id="chat-status">Connected to RivetFlow AI test endpoint.</div>
-      <button class="btn secondary" style="margin-top:12px" onclick="resetChat()">Start a new conversation</button>
+      <div class="field">
+        <label for="leadPhone">Phone number</label>
+        <input id="leadPhone" placeholder="Phone number">
+      </div>
+      <button class="primary" id="addLeadButton">Add lead</button>
+      <p class="muted" id="leadMessage"></p>
     </div>
     <div class="card">
-      <h2>Assistant configuration</h2>
-      <div class="field"><label>Business name</label><input value="Northstar Renovations" disabled></div>
-      <div class="field"><label>AI model</label><input value="GLM 4.7 Flash" disabled></div>
-      <div class="field"><label>Connection</label><input value="Cloudflare Workers AI" disabled></div>
-      <div class="notice">Live AI responses are connected. Lead capture automation, business-specific knowledge and customer authentication are still under development.</div>
-      <p class="muted">Internal demonstration only. Do not enter real customer information until the endpoint is secured.</p>
+      <h2 class="section-title">Lead list</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th></tr>
+          </thead>
+          <tbody id="leadTable">
+            <tr><td colspan="4" class="muted">Loading leads...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="page" id="phone">
-  <h1>AI phone receptionist</h1>
-  <p class="subtitle">The future phone assistant for contractor businesses.</p>
-  <div class="two-col">
+  <section class="page" id="website">
     <div class="card">
-      <h2>Receptionist status</h2>
-      <div style="font-size:35px;margin:22px 0;color:var(--accent)">◉</div>
-      <span class="pill orange">SIMULATION — NOT CONNECTED</span>
-      <p class="muted" style="margin-top:18px">No phone number or calls are connected yet. We will test the call flow before considering a paid phone service.</p>
-      <button class="btn" onclick="simulateCall()">Test a sample call</button>
-      <div id="call-result" class="notice" style="margin-top:15px" hidden></div>
+      <h2 class="section-title">Website AI Assistant</h2>
+      <p class="muted">Test the AI assistant connected to RivetFlow's AI service.</p>
+      <div class="chat-box" id="chatBox" aria-live="polite">
+        <div class="message ai">Hello! I'm the RivetFlow AI assistant. What can I help you with?</div>
+      </div>
+      <div class="chat-controls">
+        <input id="chatInput" placeholder="Type your message..." autocomplete="off">
+        <button class="primary" id="sendButton">Send</button>
+      </div>
+      <div class="chat-note muted">Demo mode: do not enter real customer or sensitive information.</div>
+      <button class="secondary" id="resetChatButton" style="margin-top:12px">New conversation</button>
     </div>
-    <div class="card">
-      <h2>Planned call handling</h2>
-      <div class="activity"><span class="dot"></span><div>Answer incoming calls<small>Greet the customer professionally</small></div></div>
-      <div class="activity"><span class="dot"></span><div>Understand the request<small>Identify service and urgency</small></div></div>
-      <div class="activity"><span class="dot"></span><div>Capture contact details<small>Ask permission to follow up</small></div></div>
-      <div class="activity"><span class="dot"></span><div>Send lead to dashboard<small>Make it available for review</small></div></div>
-    </div>
-  </div>
-</section>
+  </section>
 
-<section class="page" id="settings">
-  <h1>Business settings</h1>
-  <p class="subtitle">Demo workspace details and platform information.</p>
-  <div class="card">
-    <div class="field"><label>Workspace name</label><input value="Northstar Renovations" disabled></div>
-    <div class="field"><label>Platform provider</label><input value="RivetFlow Technologies" disabled></div>
-    <div class="field"><label>Business website</label><input value="Demo workspace — not connected" disabled></div>
-    <div class="field"><label>Platform environment</label><input value="Early prototype" disabled></div>
-  </div>
-  <div class="notice" style="margin-top:16px">Security reminder: this is a demonstration only. Authentication, tenant separation, encrypted storage, backups and production permissions must be implemented and tested before real customers use the platform.</div>
-</section>
-</div>
+  <section class="page" id="phone">
+    <div class="card">
+      <h2 class="section-title">AI Phone Receptionist</h2>
+      <div class="phone-demo">
+        <span class="badge">Simulation only</span>
+        <h3>Receptionist demo</h3>
+        <p class="muted">The phone receptionist interface is a prototype. It is not connected to a live phone number yet.</p>
+        <button class="primary" id="phoneDemoButton">Run demo</button>
+        <p id="phoneDemoResult" class="muted"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="settings">
+    <div class="card">
+      <h2 class="section-title">Workspace settings</h2>
+      <div class="field">
+        <label>Workspace name</label>
+        <input value="Northstar Renovations" disabled>
+      </div>
+      <div class="field">
+        <label>Workspace ID</label>
+        <input value="northstar-demo" disabled>
+      </div>
+      <p class="muted">Workspace settings are currently in demo mode.</p>
+    </div>
+  </section>
 </main>
 </div>
 
 <script>
 const TENANT_ID = "northstar-demo";
-const AI_ENDPOINT = "/api/ai-test";
 
-let leads = [];
-let chatBusy = false;
-
-function showPage(page) {
-  const target = document.getElementById(page);
-  if (!target) return;
-
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  target.classList.add("active");
-
-  document.querySelectorAll(".nav button").forEach(button => {
-    button.classList.toggle("active", button.dataset.page === page);
+function showPage(pageName) {
+  document.querySelectorAll(".page").forEach(page => {
+    page.classList.toggle("active", page.id === pageName);
   });
 
-  const names = {
-    overview:"Overview",
-    leads:"Lead management",
-    assistant:"Website AI",
-    phone:"Phone AI",
-    settings:"Settings"
+  document.querySelectorAll(".nav button").forEach(button => {
+    button.classList.toggle("active", button.dataset.page === pageName);
+  });
+
+  const titles = {
+    overview: "Overview",
+    leads: "Leads",
+    website: "Website AI",
+    phone: "Phone AI",
+    settings: "Settings"
   };
 
-  document.getElementById("top-title").textContent = names[page] || "RivetFlow";
+  document.getElementById("pageTitle").textContent = titles[pageName] || "Overview";
 }
 
 document.querySelectorAll(".nav button").forEach(button => {
   button.addEventListener("click", () => showPage(button.dataset.page));
 });
 
-function statusClass(status) {
-  if (status === "New") return "pill";
-  if (status === "Booked") return "pill blue";
-  if (status === "Contacted") return "pill orange";
-  return "pill grey";
-}
+const chatBox = document.getElementById("chatBox");
+const chatInput = document.getElementById("chatInput");
+const sendButton = document.getElementById("sendButton");
 
-function safe(value) {
-  return String(value || "").replace(/[&<>"']/g, character => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[character]));
-}
-
-function renderLeads() {
-  const leadTable = document.getElementById("lead-table");
-  const overviewTable = document.getElementById("overview-leads");
-  const emptyMessage = document.getElementById("empty-leads");
-
-  if (!leadTable || !overviewTable) return;
-
-  leadTable.innerHTML = leads.map((lead,index) => `
-    <tr>
-      <td><strong>${safe(lead.name)}</strong></td>
-      <td>${safe(lead.service)}</td>
-      <td>${safe(lead.email || lead.phone || "—")}</td>
-      <td><span class="${statusClass(lead.status)}">${safe(lead.status)}</span></td>
-      <td>
-        <select aria-label="Update lead status"
-          onchange="updateStatus(${index},this.value)"
-          style="background:#0c141e;color:white;border:1px solid #263548;padding:7px;border-radius:6px">
-          ${["New","Contacted","Booked","Closed"].map(status =>
-            `<option value="${status}" ${lead.status===status?"selected":""}>${status}</option>`
-          ).join("")}
-        </select>
-      </td>
-    </tr>
-  `).join("");
-
-  overviewTable.innerHTML = leads.slice(-4).reverse().map(lead => `
-    <tr>
-      <td>${safe(lead.name)}</td>
-      <td>${safe(lead.service)}</td>
-      <td><span class="${statusClass(lead.status)}">${safe(lead.status)}</span></td>
-    </tr>
-  `).join("");
-
-  document.getElementById("total-leads").textContent = leads.length;
-  document.getElementById("new-leads").textContent =
-    leads.filter(lead => lead.status === "New").length;
-
-  if (emptyMessage) emptyMessage.hidden = leads.length !== 0;
-}
-
-async function loadLeads() {
-  try {
-    const response = await fetch(`/api/leads?tenant_id=${encodeURIComponent(TENANT_ID)}`);
-    if (!response.ok) throw new Error("Could not load leads");
-
-    const data = await response.json();
-    if (!Array.isArray(data)) throw new Error("Unexpected database response");
-
-    leads = data.map(lead => ({
-      id:lead.id,
-      name:lead.customer_name,
-      service:lead.service,
-      email:lead.email||"",
-      phone:lead.phone||"",
-      details:lead.message||"",
-      status:lead.status||"New"
-    }));
-
-    renderLeads();
-  } catch(error) {
-    console.error("Lead loading error:",error);
-  }
-}
-
-async function saveLead(data) {
-  const response = await fetch("/api/leads",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      tenant_id:TENANT_ID,
-      customer_name:data.name,
-      email:data.email,
-      phone:data.phone,
-      service:data.service,
-      message:data.details
-    })
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    console.error("Lead API response:",message);
-    throw new Error("The lead could not be saved.");
-  }
-
-  await loadLeads();
-}
-
-async function addLead() {
-  const name=document.getElementById("lead-name").value.trim();
-  const service=document.getElementById("lead-service").value.trim();
-  const email=document.getElementById("lead-email").value.trim();
-  const phone=document.getElementById("lead-phone").value.trim();
-  const details=document.getElementById("lead-details").value.trim();
-
-  if (!name || !service) {
-    alert("Please enter a customer name and service.");
-    return;
-  }
-
-  try {
-    await saveLead({name,service,email,phone,details});
-
-    ["lead-name","lead-email","lead-phone","lead-service","lead-details"]
-      .forEach(id => document.getElementById(id).value="");
-
-    document.getElementById("lead-form").hidden=true;
-  } catch(error) {
-    console.error(error);
-    alert("We couldn't save this lead. Please try again.");
-  }
-}
-
-async function updateStatus(index,status) {
-  const lead=leads[index];
-  if (!lead) return;
-
-  try {
-    const response=await fetch("/api/leads",{
-      method:"PATCH",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({id:lead.id,tenant_id:TENANT_ID,status})
-    });
-
-    if (!response.ok) throw new Error("Could not update lead");
-    await loadLeads();
-  } catch(error) {
-    console.error(error);
-    alert("We couldn't update this lead's status.");
-  }
-}
-
-/* Simplified AI chat: send only the latest customer message. */
-
-function addMessage(message, type) {
-  const log=document.getElementById("chat-log");
-  const item=document.createElement("div");
-
-  item.className="message "+type;
-  item.textContent=message;
-
-  log.appendChild(item);
-  log.scrollTop=log.scrollHeight;
+function addChatMessage(message, type) {
+  const element = document.createElement("div");
+  element.className = "message " + type;
+  element.textContent = message;
+  chatBox.appendChild(element);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function resetChat() {
-  chatBusy = false;
-
-  const log=document.getElementById("chat-log");
-  log.innerHTML="";
-
-  addMessage(
-    "Welcome to Northstar Renovations! I'm the AI assistant. How can I help you with your home project today?",
-    "ai"
-  );
-
-  document.getElementById("chat-status").textContent =
-    "Connected to RivetFlow AI test endpoint.";
-
-  document.getElementById("chat-input").value="";
-  document.getElementById("chat-input").disabled=false;
-  document.getElementById("chat-send").disabled=false;
+  chatBox.replaceChildren();
+  addChatMessage("Hello! I'm the RivetFlow AI assistant. What can I help you with?", "ai");
+  chatInput.value = "";
+  chatInput.disabled = false;
+  sendButton.disabled = false;
+  sendButton.textContent = "Send";
 }
 
 async function sendChat() {
-  const input=document.getElementById("chat-input");
-  const sendButton=document.getElementById("chat-send");
-  const status=document.getElementById("chat-status");
+  const message = chatInput.value.trim();
 
-  const message=input.value.trim();
+  if (!message || sendButton.disabled) return;
 
-  if (!message || chatBusy) return;
+  addChatMessage(message, "user");
+  chatInput.value = "";
+  chatInput.disabled = true;
+  sendButton.disabled = true;
+  sendButton.textContent = "Thinking...";
 
-  addMessage(message,"user");
-
-  input.value="";
-  chatBusy=true;
-  input.disabled=true;
-  sendButton.disabled=true;
-  status.textContent="RivetFlow AI is thinking...";
+  const loading = document.createElement("div");
+  loading.className = "message ai";
+  loading.textContent = "Thinking...";
+  chatBox.appendChild(loading);
+  chatBox.scrollTop = chatBox.scrollHeight;
 
   try {
-    const response = await fetch(AI_ENDPOINT,{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        message:message
-      })
+    const response = await fetch("/api/ai-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: message })
     });
 
     const data = await response.json();
+    loading.remove();
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || "The AI request failed.");
+    if (!response.ok || data.success !== true || typeof data.reply !== "string") {
+      throw new Error(data.error || "The AI service returned an error.");
     }
 
-    if (typeof data.reply !== "string" || !data.reply.trim()) {
-      throw new Error("The AI returned an empty response.");
-    }
-
-    addMessage(data.reply.trim(),"ai");
-    status.textContent="RivetFlow AI is connected and responding.";
-
-  } catch(error) {
-    console.error("RivetFlow AI error:",error);
-
-    addMessage(
-      "I'm sorry, I couldn't connect to the assistant just now. Please try sending your message again.",
-      "ai"
-    );
-
-    status.textContent="Connection problem. Please try again.";
+    addChatMessage(data.reply, "ai");
+  } catch (error) {
+    loading.remove();
+    addChatMessage("Sorry, I couldn't get a response. Please try again. (" + error.message + ")", "ai");
   } finally {
-    chatBusy=false;
-    input.disabled=false;
-    sendButton.disabled=false;
-    input.focus();
+    chatInput.disabled = false;
+    sendButton.disabled = false;
+    sendButton.textContent = "Send";
+    chatInput.focus();
   }
 }
 
-document.getElementById("chat-input").addEventListener("keydown",event=>{
-  if (event.key==="Enter") {
+sendButton.addEventListener("click", sendChat);
+
+chatInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
     event.preventDefault();
     sendChat();
   }
 });
 
-function simulateCall() {
-  const result=document.getElementById("call-result");
+document.getElementById("resetChatButton").addEventListener("click", resetChat);
 
-  result.hidden=false;
-  result.textContent=
-    "Sample call completed: the receptionist greeted the caller, identified a roofing inquiry and would ask for contact details and permission to follow up. No real call was placed.";
+async function loadLeads() {
+  const table = document.getElementById("leadTable");
+
+  try {
+    const response = await fetch("/api/leads?tenantId=" + encodeURIComponent(TENANT_ID));
+    if (!response.ok) throw new Error("Could not load leads.");
+
+    const data = await response.json();
+    const leads = Array.isArray(data) ? data : (data.leads || []);
+
+    document.getElementById("leadCount").textContent = leads.length;
+    table.replaceChildren();
+
+    if (leads.length === 0) {
+      const row = table.insertRow();
+      const cell = row.insertCell();
+      cell.colSpan = 4;
+      cell.className = "muted";
+      cell.textContent = "No leads yet.";
+      return;
+    }
+
+    leads.forEach(lead => {
+      const row = table.insertRow();
+      [lead.name, lead.email, lead.phone, lead.status || "New"].forEach(value => {
+        row.insertCell().textContent = value || "—";
+      });
+    });
+  } catch (error) {
+    table.replaceChildren();
+    const row = table.insertRow();
+    const cell = row.insertCell();
+    cell.colSpan = 4;
+    cell.className = "muted";
+    cell.textContent = "Lead list unavailable. " + error.message;
+    document.getElementById("leadCount").textContent = "—";
+  }
 }
 
-resetChat();
+async function addLead() {
+  const name = document.getElementById("leadName").value.trim();
+  const email = document.getElementById("leadEmail").value.trim();
+  const phone = document.getElementById("leadPhone").value.trim();
+  const message = document.getElementById("leadMessage");
+  const button = document.getElementById("addLeadButton");
+
+  if (!name) {
+    message.textContent = "Please enter a customer name.";
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = "Saving lead...";
+
+  try {
+    const response = await fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenantId: TENANT_ID,
+        name: name,
+        email: email,
+        phone: phone,
+        status: "New"
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.success === false) {
+      throw new Error(data.error || "Could not save lead.");
+    }
+
+    message.textContent = "Lead added.";
+    document.getElementById("leadName").value = "";
+    document.getElementById("leadEmail").value = "";
+    document.getElementById("leadPhone").value = "";
+    await loadLeads();
+  } catch (error) {
+    message.textContent = "Error: " + error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+document.getElementById("addLeadButton").addEventListener("click", addLead);
+
+document.getElementById("phoneDemoButton").addEventListener("click", () => {
+  document.getElementById("phoneDemoResult").textContent =
+    "Demo complete. Live phone integration has not been connected yet.";
+});
+
 loadLeads();
 </script>
 </body>
