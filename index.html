@@ -13,7 +13,7 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
-button,input,textarea{font:inherit}
+button,input,textarea,select{font:inherit}
 .app{display:flex;min-height:100vh}
 .sidebar{width:230px;background:#0e1621;border-right:1px solid var(--line);padding:25px 16px;flex-shrink:0}
 .logo{font-size:21px;font-weight:800;margin-bottom:8px}
@@ -37,13 +37,13 @@ h1{font-size:25px;margin:0 0 7px}
 button.primary{background:var(--blue);color:white;border:0;border-radius:8px;padding:11px 16px;cursor:pointer}
 button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 14px;cursor:pointer}
 button:disabled{opacity:.55;cursor:not-allowed}
-input,textarea{width:100%;background:#0c1420;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:12px;outline:none}
-input:focus,textarea:focus{border-color:var(--blue)}
-.field{margin-bottom:12px}
+input,textarea,select{width:100%;background:#0c1420;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:12px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--blue)}
+textarea{min-height:90px;resize:vertical}
+select{color-scheme:dark}
+.field{margin-bottom:15px}
 label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:left;padding:12px 8px;border-bottom:1px solid var(--line)}
-th{color:var(--muted);font-weight:500}
+.field-hint{font-size:11px;color:var(--muted);margin-top:6px}
 .chat-box{height:390px;overflow-y:auto;background:#0c1420;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:13px}
 .message{max-width:90%;padding:12px 14px;border-radius:10px;margin-bottom:12px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:14px}
 .message.user{background:#203b60;margin-left:auto}
@@ -52,8 +52,9 @@ th{color:var(--muted);font-weight:500}
 .chat-controls{display:flex;gap:9px}
 .chat-controls input{flex:1;min-width:0}
 .chat-note{margin-top:10px}
-.badge{display:inline-block;background:#203b60;color:#9fc2ff;padding:5px 8px;border-radius:20px;font-size:11px}
 .phone-demo{border:1px solid var(--line);background:#0c1420;border-radius:10px;padding:20px}
+.badge{display:inline-block;background:#203b60;color:#9fc2ff;padding:5px 8px;border-radius:20px;font-size:11px}
+.profile-status{font-size:12px;color:var(--green);margin-top:10px}
 @media(max-width:700px){
 .app{display:block}
 .sidebar{width:100%;padding:15px;border-right:0;border-bottom:1px solid var(--line)}
@@ -73,6 +74,7 @@ th{color:var(--muted);font-weight:500}
   <div class="tagline">Business Control Centre</div>
   <nav class="nav">
     <button class="active" data-page="overview">Overview</button>
+    <button data-page="profile">Business Profile</button>
     <button data-page="leads">Leads</button>
     <button data-page="website">Website AI</button>
     <button data-page="phone">Phone AI</button>
@@ -84,7 +86,7 @@ th{color:var(--muted);font-weight:500}
 <header class="topbar">
   <div>
     <h1 id="pageTitle">Overview</h1>
-    <div class="subtitle">Northstar Renovations workspace</div>
+    <div class="subtitle" id="workspaceSubtitle">Northstar Renovations workspace</div>
   </div>
   <div class="status">● System online</div>
 </header>
@@ -97,12 +99,87 @@ th{color:var(--muted);font-weight:500}
   </div>
   <div class="card">
     <h2 class="section-title">Welcome to RivetFlow AI</h2>
-    <p class="muted">Your business automation control centre. Manage incoming leads, test your website assistant and explore your AI receptionist.</p>
-    <button class="primary" onclick="showPage('website')">Open Website AI</button>
+    <p class="muted">Your business automation control centre. Manage incoming leads, configure your business AI, test your website assistant and explore your AI receptionist.</p>
+    <button class="primary" onclick="showPage('profile')">Configure Business Profile</button>
   </div>
   <div class="card">
     <h2 class="section-title">Recent activity</h2>
     <p class="muted" id="activity">Dashboard loaded. Ready for testing.</p>
+  </div>
+</section>
+
+<section class="page" id="profile">
+  <div class="card">
+    <h2 class="section-title">Business Profile Manager</h2>
+    <p class="muted">Tell RivetFlow about the business. Your AI assistant will use this information when speaking with customers.</p>
+    <div class="field">
+      <label for="businessName">Business name</label>
+      <input id="businessName" placeholder="Enter your business name">
+    </div>
+    <div class="field">
+      <label for="industry">Industry</label>
+      <select id="industry">
+        <option value="Roofing and construction">Roofing and construction</option>
+        <option value="Home renovations">Home renovations</option>
+        <option value="Plumbing">Plumbing</option>
+        <option value="Electrical">Electrical</option>
+        <option value="HVAC and heating">HVAC and heating</option>
+        <option value="Real estate">Real estate</option>
+        <option value="Healthcare and clinics">Healthcare and clinics</option>
+        <option value="Dental">Dental</option>
+        <option value="Legal services">Legal services</option>
+        <option value="Accounting and finance">Accounting and finance</option>
+        <option value="Automotive">Automotive</option>
+        <option value="Restaurant and hospitality">Restaurant and hospitality</option>
+        <option value="Retail and ecommerce">Retail and ecommerce</option>
+        <option value="Cleaning services">Cleaning services</option>
+        <option value="Landscaping">Landscaping</option>
+        <option value="Professional services">Professional services</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="businessDescription">Business description</label>
+      <textarea id="businessDescription" placeholder="Describe what your business does and who it serves..."></textarea>
+    </div>
+    <div class="field">
+      <label for="businessServices">Services or products</label>
+      <textarea id="businessServices" placeholder="Enter each service on a new line..."></textarea>
+      <div class="field-hint">Example: Roof repairs, roof replacement, inspections.</div>
+    </div>
+    <div class="field">
+      <label for="serviceArea">Service area or business location</label>
+      <input id="serviceArea" placeholder="Example: Toronto and surrounding areas">
+    </div>
+    <div class="field">
+      <label for="businessTone">AI communication style</label>
+      <select id="businessTone">
+        <option value="Friendly and professional">Friendly and professional</option>
+        <option value="Warm and conversational">Warm and conversational</option>
+        <option value="Professional and formal">Professional and formal</option>
+        <option value="Relaxed and approachable">Relaxed and approachable</option>
+        <option value="Direct and efficient">Direct and efficient</option>
+        <option value="Premium and polished">Premium and polished</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="businessGoals">What should your AI help accomplish?</label>
+      <textarea id="businessGoals" placeholder="Example: Answer questions, qualify leads and help customers request appointments..."></textarea>
+    </div>
+    <div class="field">
+      <label for="businessPolicies">Important business policies and instructions</label>
+      <textarea id="businessPolicies" placeholder="Enter important rules, policies or things the AI should know..."></textarea>
+    </div>
+    <button class="primary" id="saveProfileButton">Save Business Profile</button>
+    <button class="secondary" id="resetProfileButton" style="margin-left:6px">Restore Demo Profile</button>
+    <p id="profileMessage" class="profile-status"></p>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">How this works</h2>
+    <p class="muted">Your saved profile is included with each Website AI conversation. This lets the same AI engine adapt to different industries and businesses.</p>
+    <span class="badge">Business profile prototype</span>
+    <p class="muted">At this stage, profiles are saved in this browser on this device. Permanent cloud storage, user accounts and secure separation between businesses are future platform features.</p>
   </div>
 </section>
 
@@ -129,10 +206,8 @@ th{color:var(--muted);font-weight:500}
 <section class="page" id="website">
   <div class="card">
     <h2 class="section-title">Website AI Assistant</h2>
-    <p class="muted">Test the AI assistant connected to RivetFlow's AI service.</p>
-    <div class="chat-box" id="chatBox" aria-live="polite">
-      <div class="message ai">Hello! I'm the RivetFlow AI assistant. What can I help you with?</div>
-    </div>
+    <p class="muted" id="chatBusinessLabel">Testing your business assistant.</p>
+    <div class="chat-box" id="chatBox" aria-live="polite"></div>
     <div class="chat-controls">
       <input id="chatInput" placeholder="Type your message..." autocomplete="off">
       <button class="primary" id="sendButton">Send</button>
@@ -158,9 +233,9 @@ th{color:var(--muted);font-weight:500}
 <section class="page" id="settings">
   <div class="card">
     <h2 class="section-title">Workspace settings</h2>
-    <div class="field"><label>Workspace name</label><input value="Northstar Renovations" disabled></div>
-    <div class="field"><label>Workspace ID</label><input value="northstar-demo" disabled></div>
-    <p class="muted">Workspace settings are currently in demo mode.</p>
+    <div class="field"><label>Workspace name</label><input id="settingsWorkspaceName" value="Northstar Renovations" disabled></div>
+    <div class="field"><label>Demo workspace ID</label><input value="northstar-demo" disabled></div>
+    <p class="muted">This is still a shared prototype workspace. Business accounts, permissions and separate customer databases have not yet been implemented.</p>
   </div>
 </section>
 </main>
@@ -168,27 +243,157 @@ th{color:var(--muted);font-weight:500}
 
 <script>
 const TENANT_ID = "northstar-demo";
+const PROFILE_STORAGE_KEY = "rivetflow_business_profile_v1";
 const MAX_HISTORY_MESSAGES = 10;
+
 let conversationHistory = [];
 let requestInProgress = false;
 
+const DEFAULT_PROFILE = {
+  businessName:"Northstar Renovations",
+  industry:"Roofing and construction",
+  description:"A demo home improvement business.",
+  services:"Roofing and home renovation inquiries",
+  serviceArea:"",
+  tone:"Friendly and professional",
+  goals:"Answer homeowner questions and guide them toward an appropriate next step.",
+  policies:""
+};
+
+let businessProfile = {...DEFAULT_PROFILE};
+
 function showPage(pageName) {
   document.querySelectorAll(".page").forEach(page => {
-    page.classList.toggle("active", page.id === pageName);
+    page.classList.toggle("active",page.id === pageName);
   });
+
   document.querySelectorAll(".nav button").forEach(button => {
-    button.classList.toggle("active", button.dataset.page === pageName);
+    button.classList.toggle("active",button.dataset.page === pageName);
   });
+
   const titles = {
-    overview:"Overview",leads:"Leads",website:"Website AI",
-    phone:"Phone AI",settings:"Settings"
+    overview:"Overview",
+    profile:"Business Profile",
+    leads:"Leads",
+    website:"Website AI",
+    phone:"Phone AI",
+    settings:"Settings"
   };
+
   document.getElementById("pageTitle").textContent = titles[pageName] || "Overview";
 }
 
 document.querySelectorAll(".nav button").forEach(button => {
-  button.addEventListener("click", () => showPage(button.dataset.page));
+  button.addEventListener("click",() => showPage(button.dataset.page));
 });
+
+function getProfileFromForm() {
+  return {
+    businessName:document.getElementById("businessName").value.trim(),
+    industry:document.getElementById("industry").value,
+    description:document.getElementById("businessDescription").value.trim(),
+    services:document.getElementById("businessServices").value
+      .split("\n").map(item => item.trim()).filter(Boolean),
+    serviceArea:document.getElementById("serviceArea").value.trim(),
+    tone:document.getElementById("businessTone").value,
+    goals:document.getElementById("businessGoals").value.trim(),
+    policies:document.getElementById("businessPolicies").value
+      .split("\n").map(item => item.trim()).filter(Boolean)
+  };
+}
+
+function fillProfileForm(profile) {
+  document.getElementById("businessName").value = profile.businessName || "";
+  document.getElementById("industry").value = profile.industry || "Other";
+  document.getElementById("businessDescription").value = profile.description || "";
+  document.getElementById("businessServices").value =
+    Array.isArray(profile.services) ? profile.services.join("\n") : profile.services || "";
+  document.getElementById("serviceArea").value = profile.serviceArea || "";
+  document.getElementById("businessTone").value = profile.tone || "Friendly and professional";
+  document.getElementById("businessGoals").value = profile.goals || "";
+  document.getElementById("businessPolicies").value =
+    Array.isArray(profile.policies) ? profile.policies.join("\n") : profile.policies || "";
+}
+
+function updateBusinessDisplay() {
+  const name = businessProfile.businessName || "Your Business";
+
+  document.getElementById("workspaceSubtitle").textContent = name + " workspace";
+  document.getElementById("settingsWorkspaceName").value = name;
+  document.getElementById("chatBusinessLabel").textContent =
+    "Testing the AI assistant for " + name + ".";
+}
+
+function loadBusinessProfile() {
+  try {
+    const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      businessProfile = {...DEFAULT_PROFILE,...parsed};
+    }
+  } catch(error) {
+    console.error("Could not load business profile:",error);
+  }
+
+  fillProfileForm(businessProfile);
+  updateBusinessDisplay();
+  showWelcomeMessage();
+}
+
+function saveBusinessProfile() {
+  const profile = getProfileFromForm();
+
+  if (!profile.businessName) {
+    document.getElementById("profileMessage").textContent =
+      "Please enter a business name before saving.";
+    return;
+  }
+
+  if (!profile.description) {
+    document.getElementById("profileMessage").textContent =
+      "Please add a short business description.";
+    return;
+  }
+
+  try {
+    localStorage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(profile));
+    businessProfile = profile;
+    updateBusinessDisplay();
+
+    document.getElementById("profileMessage").textContent =
+      "Business profile saved on this device. Your next AI conversation will use these settings.";
+
+    resetChat();
+    document.getElementById("activity").textContent =
+      "Business profile updated for " + businessProfile.businessName + ".";
+  } catch(error) {
+    document.getElementById("profileMessage").textContent =
+      "Could not save the profile in this browser.";
+  }
+}
+
+function restoreDefaultProfile() {
+  businessProfile = {...DEFAULT_PROFILE};
+  fillProfileForm(businessProfile);
+
+  try {
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+  } catch(error) {
+    console.error(error);
+  }
+
+  updateBusinessDisplay();
+  resetChat();
+
+  document.getElementById("profileMessage").textContent =
+    "Demo business profile restored.";
+}
+
+document.getElementById("saveProfileButton")
+  .addEventListener("click",saveBusinessProfile);
+
+document.getElementById("resetProfileButton")
+  .addEventListener("click",restoreDefaultProfile);
 
 const chatBox = document.getElementById("chatBox");
 const chatInput = document.getElementById("chatInput");
@@ -203,6 +408,16 @@ function addChatMessage(message,type) {
   return element;
 }
 
+function showWelcomeMessage() {
+  chatBox.replaceChildren();
+  addChatMessage(
+    "Hello! I'm the AI assistant for " +
+    (businessProfile.businessName || "your business") +
+    ". What can I help you with?",
+    "ai"
+  );
+}
+
 function setChatBusy(busy) {
   requestInProgress = busy;
   chatInput.disabled = busy;
@@ -213,8 +428,7 @@ function setChatBusy(busy) {
 function resetChat() {
   if (requestInProgress) return;
   conversationHistory = [];
-  chatBox.replaceChildren();
-  addChatMessage("Hello! I'm the RivetFlow AI assistant. What can I help you with?","ai");
+  showWelcomeMessage();
   chatInput.value = "";
   setChatBusy(false);
 }
@@ -225,7 +439,6 @@ async function sendChat() {
 
   const userMessage = {role:"user",content:message};
 
-  // Build the request from prior successful messages plus this message.
   const requestMessages = [...conversationHistory,userMessage]
     .slice(-MAX_HISTORY_MESSAGES);
 
@@ -239,23 +452,27 @@ async function sendChat() {
     const response = await fetch("/api/ai-test",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({messages:requestMessages})
+      body:JSON.stringify({
+        messages:requestMessages,
+        businessProfile:businessProfile
+      })
     });
 
     let data;
+
     try {
       data = await response.json();
     } catch {
       throw new Error("The AI service returned an unreadable response.");
     }
 
-    if (!response.ok || data.success !== true || typeof data.reply !== "string" || !data.reply.trim()) {
+    if (!response.ok || data.success !== true ||
+        typeof data.reply !== "string" || !data.reply.trim()) {
       throw new Error(data.error || "The AI service returned an error.");
     }
 
     loading.remove();
 
-    // Only save messages after the AI successfully responds.
     conversationHistory = [
       ...requestMessages,
       {role:"assistant",content:data.reply}
@@ -279,25 +496,32 @@ async function sendChat() {
 sendButton.addEventListener("click",sendChat);
 
 chatInput.addEventListener("keydown",event => {
-  if(event.key === "Enter"){
+  if(event.key === "Enter") {
     event.preventDefault();
     sendChat();
   }
 });
 
-document.getElementById("resetChatButton").addEventListener("click",resetChat);
+document.getElementById("resetChatButton")
+  .addEventListener("click",resetChat);
 
 async function loadLeads() {
   const table = document.getElementById("leadTable");
+
   try {
-    const response = await fetch("/api/leads?tenantId=" + encodeURIComponent(TENANT_ID));
+    const response = await fetch(
+      "/api/leads?tenantId=" + encodeURIComponent(TENANT_ID)
+    );
+
     if(!response.ok) throw new Error("Could not load leads.");
+
     const data = await response.json();
     const leads = Array.isArray(data) ? data : (data.leads || []);
+
     document.getElementById("leadCount").textContent = leads.length;
     table.replaceChildren();
 
-    if(leads.length === 0){
+    if(leads.length === 0) {
       const row = table.insertRow();
       const cell = row.insertCell();
       cell.colSpan = 4;
@@ -312,6 +536,7 @@ async function loadLeads() {
         row.insertCell().textContent = value || "—";
       });
     });
+
   } catch(error) {
     table.replaceChildren();
     const row = table.insertRow();
@@ -330,7 +555,7 @@ async function addLead() {
   const message = document.getElementById("leadMessage");
   const button = document.getElementById("addLeadButton");
 
-  if(!name){
+  if(!name) {
     message.textContent = "Please enter a customer name.";
     return;
   }
@@ -348,7 +573,8 @@ async function addLead() {
     });
 
     const data = await response.json();
-    if(!response.ok || data.success === false){
+
+    if(!response.ok || data.success === false) {
       throw new Error(data.error || "Could not save lead.");
     }
 
@@ -356,7 +582,9 @@ async function addLead() {
     document.getElementById("leadName").value = "";
     document.getElementById("leadEmail").value = "";
     document.getElementById("leadPhone").value = "";
+
     await loadLeads();
+
   } catch(error) {
     message.textContent = "Error: " + error.message;
   } finally {
@@ -364,13 +592,15 @@ async function addLead() {
   }
 }
 
-document.getElementById("addLeadButton").addEventListener("click",addLead);
+document.getElementById("addLeadButton")
+  .addEventListener("click",addLead);
 
 document.getElementById("phoneDemoButton").addEventListener("click",() => {
   document.getElementById("phoneDemoResult").textContent =
     "Demo complete. Live phone integration has not been connected yet.";
 });
 
+loadBusinessProfile();
 loadLeads();
 </script>
 </body>
