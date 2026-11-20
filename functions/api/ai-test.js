@@ -32,7 +32,7 @@ export async function onRequestPost({ request, env }) {
 
   try {
     const suppliedKey = request.headers.get("Authorization");
-    const expectedKey = env.RIVETFLOW_TESTKEY;
+    const expectedKey = env.RIVETFLOW_TEST_KEY;
 
     if (!expectedKey || suppliedKey !== `Bearer ${expectedKey}`) {
       return Response.json(
