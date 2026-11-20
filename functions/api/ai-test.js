@@ -18,7 +18,6 @@ function corsHeaders(request) {
   return headers;
 }
 
-// Handle the browser's preliminary security request
 export async function onRequestOptions({ request }) {
   return new Response(null, {
     status: 204,
@@ -26,17 +25,30 @@ export async function onRequestOptions({ request }) {
   });
 }
 
-// Handle the actual AI request
 export async function onRequestPost({ request, env }) {
   const headers = corsHeaders(request);
 
   try {
-    const suppliedKey = request.headers.get("Authorization");
     const expectedKey = env.RIVETFLOW_TEST_KEY;
+    const suppliedKey = request.headers.get("Authorization");
 
-    if (!expectedKey || suppliedKey !== `Bearer ${expectedKey}`) {
+    if (!expectedKey) {
       return Response.json(
-        { error: "Unauthorized." },
+        { error: "Server configuration: test secret is missing." },
+        { status: 500, headers }
+      );
+    }
+
+    if (!suppliedKey) {
+      return Response.json(
+        { error: "Authorization header is missing." },
+        { status: 401, headers }
+      );
+    }
+
+    if (suppliedKey !== `Bearer ${expectedKey}`) {
+      return Response.json(
+        { error: "Authorization key does not match." },
         { status: 401, headers }
       );
     }
@@ -53,7 +65,7 @@ export async function onRequestPost({ request, env }) {
 
     if (message.length > 1500) {
       return Response.json(
-        { error: "Message is too long. Maximum is 1500 characters." },
+        { error: "Message is too long." },
         { status: 400, headers }
       );
     }
