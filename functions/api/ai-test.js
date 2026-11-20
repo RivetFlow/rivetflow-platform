@@ -1,38 +1,10 @@
 
-const ALLOWED_ORIGIN = "https://hoppscotch.io";
-
-function corsHeaders(request) {
-  const origin = request.headers.get("Origin");
-
-  const headers = {
-    "Vary": "Origin",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400"
-  };
-
-  if (origin === ALLOWED_ORIGIN) {
-    headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGIN;
-  }
-
-  return headers;
-}
-
-export async function onRequestOptions({ request }) {
-  return new Response(null, {
-    status: 204,
-    headers: corsHeaders(request)
-  });
-}
-
 export async function onRequestPost({ request, env }) {
-  const headers = corsHeaders(request);
-
   try {
     if (!env.AI) {
       return Response.json(
-        { error: "Workers AI binding is missing." },
-        { status: 500, headers }
+        { success: false, error: "AI connection is missing." },
+        { status: 500 }
       );
     }
 
@@ -41,15 +13,15 @@ export async function onRequestPost({ request, env }) {
 
     if (typeof message !== "string" || !message.trim()) {
       return Response.json(
-        { error: "Please provide a message." },
-        { status: 400, headers }
+        { success: false, error: "Please provide a message." },
+        { status: 400 }
       );
     }
 
     if (message.length > 1500) {
       return Response.json(
-        { error: "Message is too long." },
-        { status: 400, headers }
+        { success: false, error: "Message is too long." },
+        { status: 400 }
       );
     }
 
@@ -57,25 +29,35 @@ export async function onRequestPost({ request, env }) {
       "@cf/zai-org/glm-4.7-flash",
       {
         prompt:
-          "You are RivetFlow AI, an intelligent assistant " +
-          "for contractors. Give practical, clear and " +
-          "professional answers.\n\n" +
-          "User message: " + message.trim()
+          "You are RivetFlow AI, a professional AI assistant for contractors. " +
+          "Give clear, practical, useful answers. Be concise but explain your reasoning when helpful.\n\n" +
+          "User message: " + message.trim(),
+        max_tokens: 256
       }
     );
 
-    return Response.json(
-      {
-        success: true,
-        reply: result.response ?? result
-      },
-      { status: 200, headers }
-    );
+    const reply =
+      result?.choices?.[0]?.text ??
+      result?.response ??
+      "";
+
+    if (!reply.trim()) {
+      return Response.json(
+        { success: false, error: "The AI returned an empty response." },
+        { status: 502 }
+      );
+    }
+
+    return Response.json({
+      success: true,
+      reply: reply.trim(),
+      model: "@cf/zai-org/glm-4.7-flash"
+    });
 
   } catch (error) {
     return Response.json(
-      { error: "AI request failed. Check the Workers AI model and binding." },
-      { status: 500, headers }
+      { success: false, error: "The AI request could not be completed." },
+      { status: 500 }
     );
   }
 }
