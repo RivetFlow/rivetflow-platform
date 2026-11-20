@@ -39,19 +39,38 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
+    const prompt = `
+You are RivetFlow AI, a professional business assistant
+built for contractors and home-service companies.
+
+YOUR RULES:
+- Answer only the user's actual question.
+- Stay focused on roofing, contractors, sales and business operations when relevant.
+- Never introduce unrelated subjects.
+- Do not invent previous conversations or instructions.
+- Do not repeat the user's question.
+- Use clear, natural, professional language.
+- Give practical advice that can actually be used.
+- Keep answers concise unless more detail is requested.
+
+USER REQUEST:
+${message.trim()}
+
+Write your answer now. Follow the request exactly.
+`;
+
     const result = await env.AI.run(
       "@cf/zai-org/glm-4.7-flash",
       {
-        prompt:
-          "You are RivetFlow AI, a professional AI assistant for contractors. " +
-          "Give clear, practical, useful answers.\n\n" +
-          "User message: " + message.trim(),
-        max_tokens: 256
+        prompt,
+        max_completion_tokens: 512,
+        temperature: 0.3
       }
     );
 
     const reply =
       result?.choices?.[0]?.text ??
+      result?.choices?.[0]?.message?.content ??
       result?.response ??
       "";
 
