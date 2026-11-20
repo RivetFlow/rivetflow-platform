@@ -1,10 +1,37 @@
-
+ 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   "Content-Type": "application/json"
 };
+
+function cleanReply(text) {
+  if (typeof text !== "string") return "";
+
+  let lines = text
+    .replace(/\r/g, "")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const seen = new Set();
+  const cleaned = [];
+
+  for (const line of lines) {
+    const normalized = line
+      .replace(/^#+\s*/, "")
+      .replace(/\*\*/g, "")
+      .toLowerCase();
+
+    if (seen.has(normalized)) continue;
+
+    seen.add(normalized);
+    cleaned.push(line);
+  }
+
+  return cleaned.join("\n").trim();
+}
 
 export async function onRequestOptions() {
   return new Response(null, {
@@ -39,44 +66,44 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
-    const prompt = `
-You are RivetFlow AI, a professional business assistant
-built for contractors and home-service companies.
+    const prompt = `You are RivetFlow AI, a professional assistant for contractors and home-service businesses.
 
-YOUR RULES:
-- Answer only the user's actual question.
-- Stay focused on roofing, contractors, sales and business operations when relevant.
-- Never introduce unrelated subjects.
-- Do not invent previous conversations or instructions.
-- Do not repeat the user's question.
-- Use clear, natural, professional language.
-- Give practical advice that can actually be used.
-- Keep answers concise unless more detail is requested.
+Answer the user's question directly.
 
-USER REQUEST:
-${message.trim()}
+Rules:
+- Give one complete answer only.
+- Never repeat sentences, paragraphs, or headings.
+- Do not write the word "Answer:" as a heading.
+- Do not repeat the question.
+- Do not add a sales pitch or call to action unless requested.
+- Use clear, natural language.
+- Use short paragraphs or a short numbered list when helpful.
+- Keep the answer under 180 words unless the user requests more detail.
+- Never recommend unsafe roof repairs, such as climbing onto a wet or storm-damaged roof or securing plastic with nails.
 
-Write your answer now. Follow the request exactly.
-`;
+User question:
+${message.trim()}`;
 
     const result = await env.AI.run(
       "@cf/zai-org/glm-4.7-flash",
       {
         prompt,
-        max_completion_tokens: 512,
-        temperature: 0.3
+        max_tokens: 256,
+        temperature: 0.2
       }
     );
 
-    const reply =
+    const rawReply =
       result?.choices?.[0]?.text ??
       result?.choices?.[0]?.message?.content ??
       result?.response ??
       "";
 
-    if (typeof reply !== "string" || !reply.trim()) {
+    const reply = cleanReply(rawReply);
+
+    if (!reply) {
       return Response.json(
-        { success: false, error: "The AI returned an empty response." },
+        { success: false, error: "The AI returned an empty response. Please try again." },
         { status: 502, headers: corsHeaders }
       );
     }
@@ -84,7 +111,7 @@ Write your answer now. Follow the request exactly.
     return Response.json(
       {
         success: true,
-        reply: reply.trim(),
+        reply,
         model: "@cf/zai-org/glm-4.7-flash"
       },
       { status: 200, headers: corsHeaders }
