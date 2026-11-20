@@ -159,7 +159,7 @@ td{color:#e2e9f1}
   <div class="two-col">
     <div class="assistant-box">
       <h2>Northstar customer chat</h2>
-      <p class="muted">Ask questions about roofing, renovations, estimates, customer service or running a contracting business. The AI generates responses in real time.</p>
+      <p class="muted">Ask questions about roofing, renovations, estimates or customer service. The AI generates responses in real time.</p>
       <div class="chat-log" id="chat-log">
         <div class="message ai">Welcome to Northstar Renovations! I'm the AI assistant. How can I help you with your home project today?</div>
       </div>
@@ -175,8 +175,8 @@ td{color:#e2e9f1}
       <div class="field"><label>Business name</label><input value="Northstar Renovations" disabled></div>
       <div class="field"><label>AI model</label><input value="GLM 4.7 Flash" disabled></div>
       <div class="field"><label>Connection</label><input value="Cloudflare Workers AI" disabled></div>
-      <div class="notice">Live AI responses are now connected. Lead capture automation, business-specific knowledge and customer authentication are still under development.</div>
-      <p class="muted">This is an internal demonstration. Do not enter real customer information until the endpoint is secured.</p>
+      <div class="notice">Live AI responses are connected. Lead capture automation, business-specific knowledge and customer authentication are still under development.</div>
+      <p class="muted">Internal demonstration only. Do not enter real customer information until the endpoint is secured.</p>
     </div>
   </div>
 </section>
@@ -223,7 +223,6 @@ const TENANT_ID = "northstar-demo";
 const AI_ENDPOINT = "/api/ai-test";
 
 let leads = [];
-let chatHistory = [];
 let chatBusy = false;
 
 function showPage(page) {
@@ -396,7 +395,7 @@ async function updateStatus(index,status) {
   }
 }
 
-/* RivetFlow AI chat connection */
+/* Simplified AI chat: send only the latest customer message. */
 
 function addMessage(message, type) {
   const log=document.getElementById("chat-log");
@@ -410,7 +409,6 @@ function addMessage(message, type) {
 }
 
 function resetChat() {
-  chatHistory = [];
   chatBusy = false;
 
   const log=document.getElementById("chat-log");
@@ -440,11 +438,6 @@ async function sendChat() {
 
   addMessage(message,"user");
 
-  chatHistory.push({
-    role:"user",
-    content:message
-  });
-
   input.value="";
   chatBusy=true;
   input.disabled=true;
@@ -452,30 +445,13 @@ async function sendChat() {
   status.textContent="RivetFlow AI is thinking...";
 
   try {
-    const conversation = chatHistory.slice(-12).map(item => {
-      return item.role.toUpperCase() + ": " + item.content;
-    }).join("\n\n");
-
-    const prompt =
-      "You are the helpful website assistant for Northstar Renovations, " +
-      "a home renovation and roofing company. " +
-      "Answer the visitor's questions naturally, accurately and professionally. " +
-      "Focus on helping homeowners understand their project and next steps. " +
-      "Ask useful follow-up questions when appropriate. " +
-      "Never invent company prices, warranties, service areas, appointments or policies. " +
-      "If you do not know something specific about the company, say that the team can confirm it. " +
-      "Do not advertise RivetFlow or add an unnecessary sales pitch. " +
-      "Keep answers clear and reasonably concise.\n\n" +
-      "CONVERSATION SO FAR:\n" + conversation +
-      "\n\nRespond to the visitor's latest message.";
-
     const response = await fetch(AI_ENDPOINT,{
       method:"POST",
       headers:{
         "Content-Type":"application/json"
       },
       body:JSON.stringify({
-        message:prompt
+        message:message
       })
     });
 
@@ -489,14 +465,7 @@ async function sendChat() {
       throw new Error("The AI returned an empty response.");
     }
 
-    const reply=data.reply.trim();
-
-    chatHistory.push({
-      role:"assistant",
-      content:reply
-    });
-
-    addMessage(reply,"ai");
+    addMessage(data.reply.trim(),"ai");
     status.textContent="RivetFlow AI is connected and responding.";
 
   } catch(error) {
@@ -517,7 +486,10 @@ async function sendChat() {
 }
 
 document.getElementById("chat-input").addEventListener("keydown",event=>{
-  if (event.key==="Enter") sendChat();
+  if (event.key==="Enter") {
+    event.preventDefault();
+    sendChat();
+  }
 });
 
 function simulateCall() {
