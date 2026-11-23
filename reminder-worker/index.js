@@ -5,11 +5,42 @@ const FROM_EMAIL = "RivetFlow <notifications@rivetflowtechnologies.com>";
 
 export default {
   async scheduled(event, env, ctx) {
+    // Safety lock: automatic sending stays disabled until deliberately enabled.
+    if (env.REMINDERS_ENABLED !== "true") return;
+
     ctx.waitUntil(sendReminders(env));
   },
 
-  async fetch() {
-    return new Response("RivetFlow Reminder Engine is running.", {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/check") {
+      try {
+        if (!env.DB) {
+          return Response.json({ success: false, error: "Database binding missing." }, { status: 500 });
+        }
+
+        const result = await env.DB.prepare(`
+          SELECT COUNT(*) AS due_count
+          FROM leads l
+          LEFT JOIN lead_reminders r ON r.lead_id = l.id
+          WHERE l.follow_up_at <= date('now')
+            AND COALESCE(l.follow_up_completed, 0) = 0
+            AND r.lead_id IS NULL
+        `).first();
+
+        return Response.json({
+          success: true,
+          message: "Database check completed. No emails were sent.",
+          due_leads: result?.due_count ?? 0,
+          automatic_sending: env.REMINDERS_ENABLED === "true" ? "enabled" : "paused"
+        });
+      } catch (error) {
+        return Response.json({ success: false, error: error.message }, { status: 500 });
+      }
+    }
+
+    return new Response("RivetFlow Reminder Engine is running. Automatic sending is paused.", {
       status: 200
     });
   }
@@ -33,7 +64,6 @@ async function sendReminders(env) {
   `).all();
 
   const leads = result.results || [];
-
   if (!leads.length) return;
 
   const rows = leads.map(lead => `
@@ -59,12 +89,7 @@ async function sendReminders(env) {
         <h2>RivetFlow Follow-Up Reminder</h2>
         <p>You have ${leads.length} lead(s) requiring attention.</p>
         <table border="1" cellpadding="8" cellspacing="0">
-          <tr>
-            <th>Customer</th>
-            <th>Service</th>
-            <th>Priority</th>
-            <th>Business</th>
-          </tr>
+          <tr><th>Customer</th><th>Service</th><th>Priority</th><th>Business</th></tr>
           ${rows}
         </table>
         <p>Open your RivetFlow dashboard to manage these leads.</p>
@@ -95,4 +120,3 @@ function escapeHtml(value) {
     "'": "&#39;"
   })[character]);
 }
-
