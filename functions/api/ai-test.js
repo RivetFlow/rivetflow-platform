@@ -127,7 +127,19 @@ CUSTOMER CONVERSION
 - Never redirect customers to competing businesses.
 - Never claim an appointment is booked or customer details
   have been saved unless a connected tool confirms that action.
-- If a feature is not connected, do not pretend it is available.
+
+LEAD CAPTURE
+
+- When a customer wants to submit an enquiry, collect their name,
+  at least one contact method, and the service they need.
+- Ask for missing information one question at a time.
+- Collect a service address when relevant to the business.
+- Respect the customer's decision if they do not want to submit.
+- A customer must clearly agree to submit their enquiry.
+- Never tell a customer that an enquiry was submitted or saved.
+  The platform will confirm that only after the database saves it.
+- If the customer has provided details but submission is not
+  confirmed, explain that you still need to complete the process.
 
 PRIVACY AND SECURITY
 
@@ -309,6 +321,208 @@ async function handleProfileAction(body, db) {
   );
 }
 
+// Check that the customer clearly agreed to submit an enquiry.
+function hasCustomerConsent(messages) {
+  const userMessages = messages
+    .filter(message => message.role === "user")
+    .map(message => message.content.toLowerCase());
+
+  return userMessages.some(message => {
+    const negative =
+      /\b(don't|do not|dont|never|cancel|rather not|not interested)\b.{0,60}\b(submit|send|create|save|enquir|inquir|request|booking)\b/i;
+
+    if (negative.test(message)) return false;
+
+    const positive =
+      /\b(yes[,! ]*(please)?|i'd like to|i would like to|i want to|please go ahead|go ahead|please submit|submit my|send my|create my|proceed with|confirm)\b.{0,120}\b(submit|send|create|save|enquir|inquir|request|booking|appointment|details)\b/i;
+
+    return positive.test(message) ||
+      /\b(go ahead and submit|please submit my enquiry|please submit my inquiry)\b/i.test(message);
+  });
+}
+
+// Ask the AI to extract structured customer details from the conversation.
+async function extractLeadDetails(env, messages) {
+  const extractionPrompt = `
+You extract customer enquiry details for a business CRM.
+
+Read the conversation and return ONLY one JSON object.
+Do not include Markdown or explanations.
+
+Use this exact structure:
+{
+  "customerName": "",
+  "email": "",
+  "phone": "",
+  "service": "",
+  "address": "",
+  "details": ""
+}
+
+RULES:
+- Only use information explicitly provided by the customer.
+- Do not invent or guess missing details.
+- customerName must be the customer's actual name if provided.
+- email and phone must be copied accurately.
+- service should briefly describe what the customer wants.
+- address should contain the service location if provided.
+- details should briefly summarize the customer's request.
+- Do not include sensitive unnecessary information.
+- Use empty strings for missing information.
+- Return valid JSON only.
+
+CONVERSATION:
+${JSON.stringify(messages)}
+`;
+
+  const result = await env.AI.run(MODEL, {
+    messages: [
+      {
+        role: "system",
+        content: "You are a precise information extraction assistant. Return valid JSON only."
+      },
+      {
+        role: "user",
+        content: extractionPrompt
+      }
+    ],
+    max_completion_tokens: 350,
+    temperature: 0,
+    chat_template_kwargs: {
+      enable_thinking: false,
+      clear_thinking: true,
+    },
+  });
+
+  const raw =
+    result?.choices?.[0]?.message?.content ??
+    result?.choices?.[0]?.text ??
+    result?.response ??
+    "";
+
+  const cleaned = cleanReply(raw)
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("Lead extraction did not return valid JSON.");
+  }
+
+  const lead = JSON.parse(cleaned.slice(start, end + 1));
+
+  return {
+    customerName: cleanText(lead.customerName, 120),
+    email: cleanText(lead.email, 150),
+    phone: cleanText(lead.phone, 60),
+    service: cleanText(lead.service, 200),
+    address: cleanText(lead.address, 250),
+    details: cleanText(lead.details, 1000),
+  };
+}
+
+// Save a confirmed customer enquiry into the existing leads table.
+async function saveCustomerLead(db, tenantId, lead) {
+  if (!lead.customerName) {
+    return { saved: false, reason: "Customer name is missing." };
+  }
+
+  if (!lead.email && !lead.phone) {
+    return { saved: false, reason: "Customer contact information is missing." };
+  }
+
+  if (!lead.service) {
+    return { saved: false, reason: "Requested service is missing." };
+  }
+
+  const messageParts = [];
+
+  if (lead.details) {
+    messageParts.push("Customer enquiry: " + lead.details);
+  }
+
+  if (lead.address) {
+    messageParts.push("Service address: " + lead.address);
+  }
+
+  const message = messageParts.join("\n") || lead.service;
+
+  // Avoid creating repeated copies of the same enquiry
+  // during repeated messages in the same conversation.
+  const existing = await db.prepare(`
+    SELECT id
+    FROM leads
+    WHERE tenant_id = ?
+      AND service = ?
+      AND (
+        (? <> '' AND phone = ?)
+        OR
+        (? <> '' AND lower(email) = lower(?))
+      )
+      AND created_at >= datetime('now', '-30 minutes')
+    LIMIT 1
+  `).bind(
+    tenantId,
+    lead.service,
+    lead.phone,
+    lead.phone,
+    lead.email,
+    lead.email
+  ).first();
+
+  if (existing) {
+    return {
+      saved: true,
+      duplicate: true,
+      leadId: existing.id,
+    };
+  }
+
+  const leadId = crypto.randomUUID();
+
+  await db.prepare(`
+    INSERT INTO leads (
+      id,
+      tenant_id,
+      customer_name,
+      email,
+      phone,
+      service,
+      message,
+      status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'new')
+  `).bind(
+    leadId,
+    tenantId,
+    lead.customerName,
+    lead.email || null,
+    lead.phone || null,
+    lead.service,
+    message
+  ).run();
+
+  return {
+    saved: true,
+    duplicate: false,
+    leadId,
+  };
+}
+
+// Prevent the AI from claiming that an enquiry was saved
+// unless the database actually confirms it.
+function preventFalseSubmissionClaim(reply) {
+  const falseClaim =
+    /\b(i(?:'ve| have) submitted|your enquiry has been submitted|your inquiry has been submitted|i(?:'ve| have) saved your|your details have been saved|i(?:'ve| have) noted your contact details)\b/i;
+
+  if (!falseClaim.test(reply)) return reply;
+
+  return "I have the information you've shared. I still need to complete the enquiry submission process before I can confirm it has been received.";
+}
+
 export async function onRequestOptions() {
   return new Response(null, {
     status: 204,
@@ -438,7 +652,7 @@ export async function onRequestPost({ request, env }) {
       result?.response ??
       "";
 
-    const reply = cleanReply(rawReply);
+    let reply = cleanReply(rawReply);
 
     if (!reply) {
       return jsonResponse(
@@ -447,11 +661,55 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
+    let leadSaved = false;
+    let leadId = null;
+    let leadCaptureStatus = "not_attempted";
+
+    // Only attempt saving when the customer has clearly consented.
+    if (hasCustomerConsent(messages)) {
+      leadCaptureStatus = "awaiting_details";
+
+      try {
+        const lead = await extractLeadDetails(env, messages);
+
+        const saveResult = await saveCustomerLead(
+          env.DB,
+          tenantId,
+          lead
+        );
+
+        if (saveResult.saved) {
+          leadSaved = true;
+          leadId = saveResult.leadId;
+          leadCaptureStatus = saveResult.duplicate
+            ? "already_saved"
+            : "saved";
+
+          reply =
+            "Thank you! Your enquiry has been successfully submitted to " +
+            business.businessName +
+            ". A member of the team can now follow up with you.";
+        } else {
+          reply = preventFalseSubmissionClaim(reply);
+          leadCaptureStatus = "missing_details";
+        }
+      } catch (leadError) {
+        console.error("RivetFlow lead capture error:", leadError);
+        reply = preventFalseSubmissionClaim(reply);
+        leadCaptureStatus = "save_failed";
+      }
+    } else {
+      reply = preventFalseSubmissionClaim(reply);
+    }
+
     return jsonResponse({
       success: true,
       reply,
       model: MODEL,
       business: business.businessName,
+      leadSaved,
+      leadId,
+      leadCaptureStatus,
     });
 
   } catch (error) {
@@ -466,4 +724,3 @@ export async function onRequestPost({ request, env }) {
     );
   }
 }
- 
