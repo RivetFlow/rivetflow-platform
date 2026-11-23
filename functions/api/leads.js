@@ -1,9 +1,24 @@
 
+function cleanText(value, maxLength = 2000) {
+  if (typeof value !== "string") return null;
+
+  const cleaned = value.trim().slice(0, maxLength);
+
+  return cleaned || null;
+}
+
+function cleanPriority(value) {
+  const allowed = ["low", "normal", "high", "urgent"];
+
+  const priority = String(value || "normal").toLowerCase();
+
+  return allowed.includes(priority) ? priority : "normal";
+}
+
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
 
-    // Accept both dashboard and backend naming formats.
     const tenantId =
       url.searchParams.get("tenantId") ||
       url.searchParams.get("tenant_id");
@@ -16,7 +31,10 @@ export async function onRequestGet({ request, env }) {
     }
 
     const result = await env.DB.prepare(
-      "SELECT * FROM leads WHERE tenant_id = ? ORDER BY created_at DESC"
+      `SELECT *
+       FROM leads
+       WHERE tenant_id = ?
+       ORDER BY created_at DESC`
     ).bind(tenantId).all();
 
     return Response.json(result.results || []);
@@ -34,7 +52,10 @@ export async function onRequestPost({ request, env }) {
 
     const tenantId = data.tenantId || data.tenant_id;
 
-    if (!data.customer_name || !tenantId || !data.service) {
+    const customerName = cleanText(data.customer_name, 200);
+    const service = cleanText(data.service, 300);
+
+    if (!customerName || !tenantId || !service) {
       return Response.json(
         {
           error: "Customer name, tenant ID and service are required"
@@ -56,23 +77,52 @@ export async function onRequestPost({ request, env }) {
 
     const id = crypto.randomUUID();
 
+    const priority = cleanPriority(data.priority);
+    const category = cleanText(data.category, 150) || "general";
+    const followUpAt = cleanText(data.follow_up_at, 100);
+    const aiSummary = cleanText(data.ai_summary, 2000);
+    const nextAction = cleanText(data.next_action, 1000);
+
     await env.DB.prepare(
-      `INSERT INTO leads
-       (id, tenant_id, customer_name, email, phone, service, message, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO leads (
+        id,
+        tenant_id,
+        customer_name,
+        email,
+        phone,
+        service,
+        message,
+        status,
+        priority,
+        category,
+        follow_up_at,
+        ai_summary,
+        next_action
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       id,
       tenantId,
-      data.customer_name,
-      data.email || null,
-      data.phone || null,
-      data.service,
-      data.message || null,
-      "New"
+      customerName,
+      cleanText(data.email, 300),
+      cleanText(data.phone, 100),
+      service,
+      cleanText(data.message, 4000),
+      "New",
+      priority,
+      category,
+      followUpAt,
+      aiSummary,
+      nextAction
     ).run();
 
     return Response.json(
-      { success: true, id },
+      {
+        success: true,
+        id,
+        priority,
+        category
+      },
       { status: 201 }
     );
   } catch (error) {
@@ -96,18 +146,48 @@ export async function onRequestPatch({ request, env }) {
       !allowedStatuses.includes(data.status)
     ) {
       return Response.json(
-        { error: "Valid lead ID, tenant ID and status are required" },
+        {
+          error: "Valid lead ID, tenant ID and status are required"
+        },
         { status: 400 }
       );
     }
 
+    const updates = ["status = ?"];
+    const values = [data.status];
+
+    if (data.priority !== undefined) {
+      updates.push("priority = ?");
+      values.push(cleanPriority(data.priority));
+    }
+
+    if (data.category !== undefined) {
+      updates.push("category = ?");
+      values.push(cleanText(data.category, 150) || "general");
+    }
+
+    if (data.follow_up_at !== undefined) {
+      updates.push("follow_up_at = ?");
+      values.push(cleanText(data.follow_up_at, 100));
+    }
+
+    if (data.ai_summary !== undefined) {
+      updates.push("ai_summary = ?");
+      values.push(cleanText(data.ai_summary, 2000));
+    }
+
+    if (data.next_action !== undefined) {
+      updates.push("next_action = ?");
+      values.push(cleanText(data.next_action, 1000));
+    }
+
+    values.push(data.id, tenantId);
+
     const result = await env.DB.prepare(
-      "UPDATE leads SET status = ? WHERE id = ? AND tenant_id = ?"
-    ).bind(
-      data.status,
-      data.id,
-      tenantId
-    ).run();
+      `UPDATE leads
+       SET ${updates.join(", ")}
+       WHERE id = ? AND tenant_id = ?`
+    ).bind(...values).run();
 
     return Response.json({
       success: true,
