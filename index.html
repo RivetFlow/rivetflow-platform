@@ -32,6 +32,7 @@ h1{font-size:25px;margin:0 0 7px}
 .muted{color:var(--muted);font-size:13px;line-height:1.6}
 button.primary{background:var(--blue);color:white;border:0;border-radius:8px;padding:11px 16px;cursor:pointer}
 button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 14px;cursor:pointer}
+button.success-button{background:#173d32;color:#8ce2bd;border:1px solid #28654f;border-radius:8px;padding:9px 12px;cursor:pointer}
 button:disabled{opacity:.55;cursor:not-allowed}
 input,textarea,select{width:100%;background:#0c1420;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:12px;outline:none}
 input:focus,textarea:focus,select:focus{border-color:var(--blue)}
@@ -75,6 +76,15 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 .detail-message{margin-top:14px}
 .detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 .modal-status{margin-top:12px;color:var(--muted);font-size:13px}
+.followup-card{background:#0c1420;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+.followup-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.followup-name{font-weight:700;font-size:15px;margin-bottom:5px}
+.followup-meta{font-size:12px;color:var(--muted);line-height:1.7}
+.followup-action{font-size:13px;line-height:1.6;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+.followup-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.followup-date{font-size:12px;color:var(--orange)}
+.followup-completed{color:var(--green)}
+.followup-section{margin-bottom:24px}
 @media(max-width:700px){
 .app{display:block}
 .sidebar{width:100%;padding:15px;border-right:0;border-bottom:1px solid var(--line)}
@@ -97,6 +107,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
     <button class="active" data-page="overview">Overview</button>
     <button data-page="profile">Business Profile</button>
     <button data-page="leads">Leads</button>
+    <button data-page="followups">Follow-Up Centre</button>
     <button data-page="website">Website AI</button>
     <button data-page="phone">Phone AI</button>
     <button data-page="settings">Settings</button>
@@ -123,6 +134,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
     <h2 class="section-title">Welcome to RivetFlow AI</h2>
     <p class="muted">Your business automation control centre. Manage incoming leads, configure your business AI, test your website assistant and explore your AI receptionist.</p>
     <button class="primary" onclick="showPage('profile')">Configure Business Profile</button>
+    <button class="secondary" onclick="showPage('followups')">Open Follow-Up Centre</button>
   </div>
   <div class="card">
     <h2 class="section-title">Recent activity</h2>
@@ -198,6 +210,41 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
         <tbody id="leadsTable"><tr><td colspan="5" class="muted">Loading leads...</td></tr></tbody>
       </table>
     </div>
+  </div>
+</section>
+
+<section class="page" id="followups">
+  <div class="grid">
+    <div class="card"><div class="metric-label">Due today</div><div class="metric" id="dueTodayCount">0</div></div>
+    <div class="card"><div class="metric-label">Overdue</div><div class="metric" id="overdueCount">0</div></div>
+    <div class="card"><div class="metric-label">Upcoming</div><div class="metric" id="upcomingCount">0</div></div>
+    <div class="card"><div class="metric-label">Completed</div><div class="metric" id="completedCount">0</div></div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">Follow-Up Centre</h2>
+    <p class="muted">Your follow-up tasks are organized automatically using each lead's follow-up date. Mark tasks complete when finished, or reopen them if more work is needed.</p>
+    <p class="muted" id="followupStatus">Loading follow-up tasks...</p>
+  </div>
+
+  <div class="card followup-section">
+    <h2 class="section-title">Overdue</h2>
+    <div id="overdueList"><p class="empty-state">No overdue follow-ups.</p></div>
+  </div>
+
+  <div class="card followup-section">
+    <h2 class="section-title">Due Today</h2>
+    <div id="dueTodayList"><p class="empty-state">No follow-ups due today.</p></div>
+  </div>
+
+  <div class="card followup-section">
+    <h2 class="section-title">Upcoming</h2>
+    <div id="upcomingList"><p class="empty-state">No upcoming follow-ups.</p></div>
+  </div>
+
+  <div class="card followup-section">
+    <h2 class="section-title">Completed</h2>
+    <div id="completedList"><p class="empty-state">No completed follow-ups yet.</p></div>
   </div>
 </section>
 
@@ -332,6 +379,7 @@ let chatHistory = [];
 let chatBusy = false;
 let currentLead = null;
 let cachedLeads = [];
+let followupBusy = false;
 
 const $ = id => document.getElementById(id);
 
@@ -366,12 +414,13 @@ function showPage(page) {
 
   const titles = {
     overview:"Overview",profile:"Business Profile",leads:"Leads",
-    website:"Website AI",phone:"Phone AI",settings:"Settings"
+    followups:"Follow-Up Centre",website:"Website AI",
+    phone:"Phone AI",settings:"Settings"
   };
 
   $("pageTitle").textContent = titles[page] || "Overview";
 
-  if (page === "leads") loadLeads();
+  if (page === "leads" || page === "followups") loadLeads();
 }
 
 document.querySelectorAll(".nav button").forEach(button => {
@@ -590,6 +639,19 @@ function formatDate(value) {
   return date.toLocaleString();
 }
 
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2,"0");
+  const day = String(date.getDate()).padStart(2,"0");
+  return year + "-" + month + "-" + day;
+}
+
+function isFollowUpCompleted(lead) {
+  return lead.follow_up_completed === true ||
+    lead.follow_up_completed === 1 ||
+    lead.follow_up_completed === "1";
+}
+
 function openLeadDetails(lead) {
   currentLead = lead;
 
@@ -700,8 +762,181 @@ function updateOverview(leads) {
   ).length;
 
   $("followUpCount").textContent = leads.filter(
-    lead => Boolean(lead.follow_up_at)
+    lead => Boolean(lead.follow_up_at) && !isFollowUpCompleted(lead)
   ).length;
+}
+
+function createFollowupCard(lead,completed = false) {
+  const card = document.createElement("div");
+  card.className = "followup-card";
+
+  const top = document.createElement("div");
+  top.className = "followup-top";
+
+  const details = document.createElement("div");
+
+  const name = document.createElement("div");
+  name.className = "followup-name";
+  name.textContent = lead.customer_name || lead.name || "Unnamed customer";
+
+  const meta = document.createElement("div");
+  meta.className = "followup-meta";
+  meta.textContent =
+    (lead.service || "Service not specified") +
+    " · " + (lead.status || "New") +
+    " · Priority: " + formatPriority(lead.priority);
+
+  const date = document.createElement("div");
+  date.className = completed ? "followup-date followup-completed" : "followup-date";
+  date.textContent = completed
+    ? "✓ Follow-up completed"
+    : "Follow-up date: " + lead.follow_up_at;
+
+  details.appendChild(name);
+  details.appendChild(meta);
+  details.appendChild(date);
+
+  const priority = document.createElement("span");
+  priority.className = "priority " + formatPriority(lead.priority);
+  priority.textContent = formatPriority(lead.priority);
+
+  top.appendChild(details);
+  top.appendChild(priority);
+  card.appendChild(top);
+
+  const action = document.createElement("div");
+  action.className = "followup-action";
+  action.textContent = "Recommended next action: " +
+    (lead.next_action || "Review the enquiry and contact the customer.");
+  card.appendChild(action);
+
+  const buttons = document.createElement("div");
+  buttons.className = "followup-buttons";
+
+  const viewButton = document.createElement("button");
+  viewButton.className = "secondary";
+  viewButton.textContent = "View Lead";
+  viewButton.addEventListener("click",() => openLeadDetails(lead));
+  buttons.appendChild(viewButton);
+
+  const toggleButton = document.createElement("button");
+  toggleButton.className = completed ? "secondary" : "success-button";
+  toggleButton.textContent = completed ? "Reopen Follow-Up" : "Mark Complete";
+  toggleButton.disabled = followupBusy;
+  toggleButton.addEventListener("click",() => setFollowUpCompleted(lead,!completed));
+  buttons.appendChild(toggleButton);
+
+  card.appendChild(buttons);
+  return card;
+}
+
+function renderFollowupList(elementId,leads,emptyMessage,completed = false) {
+  const container = $(elementId);
+  container.innerHTML = "";
+
+  if (!leads.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = emptyMessage;
+    container.appendChild(empty);
+    return;
+  }
+
+  leads.forEach(lead => container.appendChild(createFollowupCard(lead,completed)));
+}
+
+function renderFollowups(leads) {
+  const today = localDateKey();
+
+  const active = leads.filter(lead =>
+    lead.follow_up_at && !isFollowUpCompleted(lead)
+  );
+
+  const completed = leads.filter(lead =>
+    lead.follow_up_at && isFollowUpCompleted(lead)
+  );
+
+  const overdue = active.filter(lead =>
+    String(lead.follow_up_at).slice(0,10) < today
+  );
+
+  const dueToday = active.filter(lead =>
+    String(lead.follow_up_at).slice(0,10) === today
+  );
+
+  const upcoming = active.filter(lead =>
+    String(lead.follow_up_at).slice(0,10) > today
+  );
+
+  const sortByDate = (a,b) =>
+    String(a.follow_up_at).localeCompare(String(b.follow_up_at));
+
+  overdue.sort(sortByDate);
+  dueToday.sort(sortByDate);
+  upcoming.sort(sortByDate);
+  completed.sort((a,b) => sortByDate(b,a));
+
+  $("dueTodayCount").textContent = dueToday.length;
+  $("overdueCount").textContent = overdue.length;
+  $("upcomingCount").textContent = upcoming.length;
+  $("completedCount").textContent = completed.length;
+
+  renderFollowupList("overdueList",overdue,"No overdue follow-ups.");
+  renderFollowupList("dueTodayList",dueToday,"No follow-ups due today.");
+  renderFollowupList("upcomingList",upcoming,"No upcoming follow-ups.");
+  renderFollowupList("completedList",completed,"No completed follow-ups yet.",true);
+
+  $("followupStatus").textContent =
+    "Showing " + active.length + " active follow-up task(s) and " +
+    completed.length + " completed task(s).";
+}
+
+async function setFollowUpCompleted(lead,completed) {
+  if (followupBusy) return;
+
+  if (!lead || !lead.id) {
+    $("followupStatus").textContent = "This lead has no record ID, so its follow-up cannot be updated.";
+    return;
+  }
+
+  followupBusy = true;
+  $("followupStatus").textContent = completed
+    ? "Saving completed follow-up..."
+    : "Reopening follow-up...";
+
+  try {
+    const response = await fetch("/api/leads",{
+      method:"PATCH",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        id:lead.id,
+        tenantId:TENANT_ID,
+        follow_up_completed:completed ? 1 : 0
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Could not update follow-up.");
+    }
+
+    lead.follow_up_completed = completed ? 1 : 0;
+
+    const cached = cachedLeads.find(item => item.id === lead.id);
+    if (cached) cached.follow_up_completed = completed ? 1 : 0;
+
+    $("activity").textContent = completed
+      ? "A customer follow-up was marked completed."
+      : "A customer follow-up was reopened.";
+
+    renderFollowups(cachedLeads);
+  } catch (error) {
+    $("followupStatus").textContent = "Update failed: " + error.message;
+  } finally {
+    followupBusy = false;
+    renderFollowups(cachedLeads);
+  }
 }
 
 async function loadLeads() {
@@ -717,6 +952,7 @@ async function loadLeads() {
 
     cachedLeads = leads;
     updateOverview(leads);
+    renderFollowups(leads);
     $("leadsTable").innerHTML = "";
 
     if (!leads.length) {
@@ -751,6 +987,7 @@ async function loadLeads() {
   } catch (error) {
     $("leadsTable").innerHTML = '<tr><td colspan="5" class="empty-state">Could not load leads.</td></tr>';
     $("leadStatus").textContent = error.message;
+    $("followupStatus").textContent = "Could not load follow-up tasks: " + error.message;
   }
 }
 
