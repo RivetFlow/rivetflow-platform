@@ -5,9 +5,7 @@ const FROM_EMAIL = "RivetFlow <notifications@rivetflowtechnologies.com>";
 
 export default {
   async scheduled(event, env, ctx) {
-    // Safety lock: automatic sending stays disabled until deliberately enabled.
     if (env.REMINDERS_ENABLED !== "true") return;
-
     ctx.waitUntil(sendReminders(env));
   },
 
@@ -34,6 +32,55 @@ export default {
           message: "Database check completed. No emails were sent.",
           due_leads: result?.due_count ?? 0,
           automatic_sending: env.REMINDERS_ENABLED === "true" ? "enabled" : "paused"
+        });
+      } catch (error) {
+        return Response.json({ success: false, error: error.message }, { status: 500 });
+      }
+    }
+
+    if (url.pathname === "/send-test") {
+      if (!env.TEST_EMAIL_TOKEN || url.searchParams.get("token") !== env.TEST_EMAIL_TOKEN) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      if (!env.RESEND_API_KEY) {
+        return Response.json({ success: false, error: "Resend API key missing." }, { status: 500 });
+      }
+
+      try {
+        const response = await fetch(RESEND_API, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: FROM_EMAIL,
+            to: [REMINDER_EMAIL],
+            subject: "RivetFlow — Test Email",
+            html: `
+              <h2>RivetFlow Email Test Successful</h2>
+              <p>This is a test message from your RivetFlow Reminder Engine.</p>
+              <p>Your Resend connection is working.</p>
+              <p>No customer reminders were sent or changed.</p>
+            `
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          return Response.json({
+            success: false,
+            error: result.message || "Resend could not send the test email."
+          }, { status: 502 });
+        }
+
+        return Response.json({
+          success: true,
+          message: "Test email accepted by Resend.",
+          recipient: REMINDER_EMAIL,
+          email_id: result.id
         });
       } catch (error) {
         return Response.json({ success: false, error: error.message }, { status: 500 });
