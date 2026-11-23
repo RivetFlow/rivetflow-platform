@@ -2,7 +2,11 @@
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
-    const tenantId = url.searchParams.get("tenant_id");
+
+    // Accept both dashboard and backend naming formats.
+    const tenantId =
+      url.searchParams.get("tenantId") ||
+      url.searchParams.get("tenant_id");
 
     if (!tenantId) {
       return Response.json(
@@ -15,7 +19,7 @@ export async function onRequestGet({ request, env }) {
       "SELECT * FROM leads WHERE tenant_id = ? ORDER BY created_at DESC"
     ).bind(tenantId).all();
 
-    return Response.json(result.results);
+    return Response.json(result.results || []);
   } catch (error) {
     return Response.json(
       { error: "Could not retrieve leads" },
@@ -28,16 +32,20 @@ export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
 
-    if (!data.customer_name || !data.tenant_id || !data.service) {
+    const tenantId = data.tenantId || data.tenant_id;
+
+    if (!data.customer_name || !tenantId || !data.service) {
       return Response.json(
-        { error: "Customer name, tenant ID and service are required" },
+        {
+          error: "Customer name, tenant ID and service are required"
+        },
         { status: 400 }
       );
     }
 
     const tenant = await env.DB.prepare(
       "SELECT id FROM tenants WHERE id = ?"
-    ).bind(data.tenant_id).first();
+    ).bind(tenantId).first();
 
     if (!tenant) {
       return Response.json(
@@ -54,7 +62,7 @@ export async function onRequestPost({ request, env }) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       id,
-      data.tenant_id,
+      tenantId,
       data.customer_name,
       data.email || null,
       data.phone || null,
@@ -63,7 +71,10 @@ export async function onRequestPost({ request, env }) {
       "New"
     ).run();
 
-    return Response.json({ success: true, id }, { status: 201 });
+    return Response.json(
+      { success: true, id },
+      { status: 201 }
+    );
   } catch (error) {
     return Response.json(
       { error: "Could not save lead" },
@@ -75,11 +86,13 @@ export async function onRequestPost({ request, env }) {
 export async function onRequestPatch({ request, env }) {
   try {
     const data = await request.json();
+
+    const tenantId = data.tenantId || data.tenant_id;
     const allowedStatuses = ["New", "Contacted", "Booked", "Closed"];
 
     if (
       !data.id ||
-      !data.tenant_id ||
+      !tenantId ||
       !allowedStatuses.includes(data.status)
     ) {
       return Response.json(
@@ -93,7 +106,7 @@ export async function onRequestPatch({ request, env }) {
     ).bind(
       data.status,
       data.id,
-      data.tenant_id
+      tenantId
     ).run();
 
     return Response.json({
