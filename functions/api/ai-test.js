@@ -321,7 +321,6 @@ async function handleProfileAction(body, db) {
   );
 }
 
-// Check that the customer clearly agreed to submit an enquiry.
 function hasCustomerConsent(messages) {
   const userMessages = messages
     .filter(message => message.role === "user")
@@ -341,13 +340,40 @@ function hasCustomerConsent(messages) {
   });
 }
 
-// Ask the AI to extract structured customer details from the conversation.
-async function extractLeadDetails(env, messages) {
-  const extractionPrompt = `
-You extract customer enquiry details for a business CRM.
+function parseAIJson(raw) {
+  const cleaned = cleanReply(raw)
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
 
-Read the conversation and return ONLY one JSON object.
-Do not include Markdown or explanations.
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("AI did not return valid JSON.");
+  }
+
+  return JSON.parse(cleaned.slice(start, end + 1));
+}
+
+// Extract customer details and analyze the enquiry for the CRM.
+async function analyzeLead(env, messages, business) {
+  const extractionPrompt = `
+You are analyzing a customer enquiry for a business CRM.
+
+BUSINESS:
+${business.businessName}
+
+INDUSTRY:
+${business.industry}
+
+BUSINESS DESCRIPTION:
+${business.description}
+
+AVAILABLE SERVICES:
+${business.services.join("; ") || "Not specified"}
+
+Read the conversation and return ONLY one valid JSON object.
 
 Use this exact structure:
 {
@@ -356,20 +382,58 @@ Use this exact structure:
   "phone": "",
   "service": "",
   "address": "",
-  "details": ""
+  "details": "",
+  "priority": "normal",
+  "category": "general",
+  "aiSummary": "",
+  "nextAction": ""
 }
 
-RULES:
+CUSTOMER DETAIL RULES:
 - Only use information explicitly provided by the customer.
-- Do not invent or guess missing details.
-- customerName must be the customer's actual name if provided.
-- email and phone must be copied accurately.
-- service should briefly describe what the customer wants.
-- address should contain the service location if provided.
-- details should briefly summarize the customer's request.
-- Do not include sensitive unnecessary information.
+- Never invent or guess missing details.
+- Copy names, emails and phone numbers accurately.
+- Service should briefly describe what the customer needs.
+- Address should contain the service location if provided.
+- Details should summarize the customer's request.
 - Use empty strings for missing information.
-- Return valid JSON only.
+
+LEAD INTELLIGENCE RULES:
+
+Priority must be exactly one of:
+- low
+- normal
+- high
+- urgent
+
+Choose priority based only on evidence in the conversation.
+- urgent: explicit immediate danger, emergency or severe time-critical need.
+- high: clearly time-sensitive, significant disruption or an explicitly urgent request.
+- normal: ordinary enquiry with no clear urgency.
+- low: general information request or clearly non-urgent interest.
+
+Do not label a lead urgent just because the customer wants a quick response.
+Do not make medical, legal, safety or technical diagnoses.
+
+Category:
+- Use a short, useful service category relevant to this business.
+- Examples include plumbing, roofing, appointment, consultation,
+  repair, installation, billing or general.
+- Do not force a category that does not fit.
+
+AI summary:
+- Write one short factual summary of the customer's request.
+- Do not include assumptions or invented information.
+
+Next action:
+- Recommend one practical next step for the business.
+- Base it on the actual enquiry and available information.
+- Do not claim an appointment is available or booked.
+- Do not invent prices, commitments or deadlines.
+
+Do not generate a follow-up date.
+Do not include unnecessary sensitive information.
+Return valid JSON only.
 
 CONVERSATION:
 ${JSON.stringify(messages)}
@@ -379,14 +443,14 @@ ${JSON.stringify(messages)}
     messages: [
       {
         role: "system",
-        content: "You are a precise information extraction assistant. Return valid JSON only."
+        content: "You are a precise CRM lead analysis assistant. Return valid JSON only."
       },
       {
         role: "user",
         content: extractionPrompt
       }
     ],
-    max_completion_tokens: 350,
+    max_completion_tokens: 550,
     temperature: 0,
     chat_template_kwargs: {
       enable_thinking: false,
@@ -400,19 +464,11 @@ ${JSON.stringify(messages)}
     result?.response ??
     "";
 
-  const cleaned = cleanReply(raw)
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
+  const lead = parseAIJson(raw);
 
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
+  const allowedPriorities = ["low", "normal", "high", "urgent"];
 
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error("Lead extraction did not return valid JSON.");
-  }
-
-  const lead = JSON.parse(cleaned.slice(start, end + 1));
+  const proposedPriority = String(lead.priority || "normal").toLowerCase();
 
   return {
     customerName: cleanText(lead.customerName, 120),
@@ -421,10 +477,15 @@ ${JSON.stringify(messages)}
     service: cleanText(lead.service, 200),
     address: cleanText(lead.address, 250),
     details: cleanText(lead.details, 1000),
+    priority: allowedPriorities.includes(proposedPriority)
+      ? proposedPriority
+      : "normal",
+    category: cleanText(lead.category, 150) || "general",
+    aiSummary: cleanText(lead.aiSummary, 1000),
+    nextAction: cleanText(lead.nextAction, 500),
   };
 }
 
-// Save a confirmed customer enquiry into the existing leads table.
 async function saveCustomerLead(db, tenantId, lead) {
   if (!lead.customerName) {
     return { saved: false, reason: "Customer name is missing." };
@@ -450,8 +511,6 @@ async function saveCustomerLead(db, tenantId, lead) {
 
   const message = messageParts.join("\n") || lead.service;
 
-  // Avoid creating repeated copies of the same enquiry
-  // during repeated messages in the same conversation.
   const existing = await db.prepare(`
     SELECT id
     FROM leads
@@ -492,9 +551,14 @@ async function saveCustomerLead(db, tenantId, lead) {
       phone,
       service,
       message,
-      status
+      status,
+      priority,
+      category,
+      follow_up_at,
+      ai_summary,
+      next_action
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'new')
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     leadId,
     tenantId,
@@ -502,7 +566,13 @@ async function saveCustomerLead(db, tenantId, lead) {
     lead.email || null,
     lead.phone || null,
     lead.service,
-    message
+    message,
+    "New",
+    lead.priority || "normal",
+    lead.category || "general",
+    null,
+    lead.aiSummary || lead.details || lead.service,
+    lead.nextAction || "Review the enquiry and follow up with the customer."
   ).run();
 
   return {
@@ -512,8 +582,6 @@ async function saveCustomerLead(db, tenantId, lead) {
   };
 }
 
-// Prevent the AI from claiming that an enquiry was saved
-// unless the database actually confirms it.
 function preventFalseSubmissionClaim(reply) {
   const falseClaim =
     /\b(i(?:'ve| have) submitted|your enquiry has been submitted|your inquiry has been submitted|i(?:'ve| have) saved your|your details have been saved|i(?:'ve| have) noted your contact details)\b/i;
@@ -664,13 +732,13 @@ export async function onRequestPost({ request, env }) {
     let leadSaved = false;
     let leadId = null;
     let leadCaptureStatus = "not_attempted";
+    let leadIntelligence = null;
 
-    // Only attempt saving when the customer has clearly consented.
     if (hasCustomerConsent(messages)) {
       leadCaptureStatus = "awaiting_details";
 
       try {
-        const lead = await extractLeadDetails(env, messages);
+        const lead = await analyzeLead(env, messages, business);
 
         const saveResult = await saveCustomerLead(
           env.DB,
@@ -684,6 +752,13 @@ export async function onRequestPost({ request, env }) {
           leadCaptureStatus = saveResult.duplicate
             ? "already_saved"
             : "saved";
+
+          leadIntelligence = {
+            priority: lead.priority,
+            category: lead.category,
+            aiSummary: lead.aiSummary,
+            nextAction: lead.nextAction,
+          };
 
           reply =
             "Thank you! Your enquiry has been successfully submitted to " +
@@ -710,6 +785,7 @@ export async function onRequestPost({ request, env }) {
       leadSaved,
       leadId,
       leadCaptureStatus,
+      leadIntelligence,
     });
 
   } catch (error) {
