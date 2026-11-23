@@ -50,10 +50,28 @@ label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}
 .phone-demo{border:1px solid var(--line);background:#0c1420;border-radius:10px;padding:20px}
 .badge{display:inline-block;background:#203b60;color:#9fc2ff;padding:5px 8px;border-radius:20px;font-size:11px}
 .profile-status{font-size:12px;color:var(--green);margin-top:10px}
-table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}
-th,td{padding:12px;border-bottom:1px solid var(--line)}
-th{color:var(--muted)}
 .table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:13px;min-width:650px}
+th,td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted)}
+.lead-row{cursor:pointer}
+.lead-row:hover{background:var(--panel2)}
+.lead-row:focus{outline:2px solid var(--blue);outline-offset:-2px}
+a.contact-link{color:#9fc2ff;text-decoration:underline}
+.empty-state{padding:18px;color:var(--muted)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:1000;display:flex;align-items:center;justify-content:center;padding:18px}
+.modal[hidden]{display:none}
+.modal-panel{width:100%;max-width:650px;max-height:90vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+.modal-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+.modal-header h2{font-size:20px;margin:0}
+.close-button{background:var(--panel2);border:1px solid var(--line);color:white;border-radius:8px;padding:8px 12px;cursor:pointer}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.detail-item{background:#0c1420;border:1px solid var(--line);border-radius:9px;padding:13px;min-width:0}
+.detail-label{font-size:11px;color:var(--muted);margin-bottom:7px}
+.detail-value{font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap}
+.detail-message{margin-top:14px}
+.detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.modal-status{margin-top:12px;color:var(--muted);font-size:13px}
 @media(max-width:700px){
 .app{display:block}
 .sidebar{width:100%;padding:15px;border-right:0;border-bottom:1px solid var(--line)}
@@ -62,6 +80,8 @@ th{color:var(--muted)}
 .nav button{width:auto;white-space:nowrap;margin:0}
 .main{padding:18px}
 .chat-box{height:350px}
+.detail-grid{grid-template-columns:1fr}
+.modal-panel{padding:16px}
 }
 </style>
 </head>
@@ -182,10 +202,11 @@ th{color:var(--muted)}
   </div>
   <div class="card">
     <h2 class="section-title">Customer Leads</h2>
+    <p class="muted">Select any lead to view its full details and update its status.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Name</th><th>Service</th><th>Email</th><th>Status</th></tr></thead>
-        <tbody id="leadsTable"><tr><td colspan="4" class="muted">Loading leads...</td></tr></tbody>
+        <thead><tr><th>Name</th><th>Service</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead>
+        <tbody id="leadsTable"><tr><td colspan="5" class="muted">Loading leads...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -230,8 +251,43 @@ th{color:var(--muted)}
     <p class="muted">This is the current prototype workspace. Secure customer accounts and tenant authorization still need to be implemented before public customer onboarding.</p>
   </div>
 </section>
-
 </main>
+</div>
+
+<div class="modal" id="leadModal" hidden>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="leadModalTitle">
+    <div class="modal-header">
+      <h2 id="leadModalTitle">Lead details</h2>
+      <button class="close-button" onclick="closeLeadDetails()">Close</button>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="detail-label">Customer name</div><div class="detail-value" id="detailName">—</div></div>
+      <div class="detail-item"><div class="detail-label">Service requested</div><div class="detail-value" id="detailService">—</div></div>
+      <div class="detail-item"><div class="detail-label">Phone number</div><div class="detail-value" id="detailPhone">—</div></div>
+      <div class="detail-item"><div class="detail-label">Email address</div><div class="detail-value" id="detailEmail">—</div></div>
+      <div class="detail-item"><div class="detail-label">Date received</div><div class="detail-value" id="detailDate">—</div></div>
+      <div class="detail-item"><div class="detail-label">Current status</div><div class="detail-value" id="detailCurrentStatus">—</div></div>
+    </div>
+    <div class="detail-item detail-message">
+      <div class="detail-label">Customer message and service address</div>
+      <div class="detail-value" id="detailMessage">No additional message provided.</div>
+    </div>
+    <div class="field" style="margin-top:18px">
+      <label for="detailStatus">Update lead status</label>
+      <select id="detailStatus">
+        <option value="New">New</option>
+        <option value="Contacted">Contacted</option>
+        <option value="Booked">Booked</option>
+        <option value="Closed">Closed</option>
+      </select>
+    </div>
+    <div class="detail-actions">
+      <button class="primary" id="saveLeadStatusButton" onclick="saveLeadStatus()">Save Status</button>
+      <a class="secondary" id="callLeadButton" href="#" style="display:none;text-decoration:none">Call customer</a>
+      <a class="secondary" id="emailLeadButton" href="#" style="display:none;text-decoration:none">Email customer</a>
+    </div>
+    <p class="modal-status" id="leadDetailStatus"></p>
+  </div>
 </div>
 
 <script>
@@ -244,12 +300,7 @@ const DEFAULT_PROFILE = {
   businessName: "Northstar Renovations",
   industry: "Roofing and construction",
   description: "Northstar Renovations provides professional roofing and renovation services.",
-  services: [
-    "Roof repairs",
-    "Roof replacement",
-    "Roof inspections",
-    "Renovations"
-  ],
+  services: ["Roof repairs","Roof replacement","Roof inspections","Renovations"],
   serviceArea: "Ontario",
   tone: "Friendly and professional",
   goals: "Answer customer questions, understand their needs and help them submit an enquiry.",
@@ -262,6 +313,8 @@ const DEFAULT_PROFILE = {
 let businessProfile = {...DEFAULT_PROFILE};
 let chatHistory = [];
 let chatBusy = false;
+let currentLead = null;
+let cachedLeads = [];
 
 const $ = id => document.getElementById(id);
 
@@ -282,7 +335,6 @@ async function apiRequest(payload) {
   if (!response.ok || data.success !== true) {
     throw new Error(data.error || data.message || "The request failed.");
   }
-
   return data;
 }
 
@@ -296,15 +348,12 @@ function showPage(page) {
   });
 
   const titles = {
-    overview:"Overview",
-    profile:"Business Profile",
-    leads:"Leads",
-    website:"Website AI",
-    phone:"Phone AI",
-    settings:"Settings"
+    overview:"Overview",profile:"Business Profile",leads:"Leads",
+    website:"Website AI",phone:"Phone AI",settings:"Settings"
   };
-
   $("pageTitle").textContent = titles[page] || "Overview";
+
+  if (page === "leads") loadLeads();
 }
 
 document.querySelectorAll(".nav button").forEach(button => {
@@ -342,7 +391,6 @@ function displayProfile(profile) {
   $("tone").value = businessProfile.tone;
   $("goals").value = businessProfile.goals;
   $("policies").value = toLines(businessProfile.policies);
-
   $("workspaceSubtitle").textContent = businessProfile.businessName + " workspace";
   $("settingsBusiness").value = businessProfile.businessName;
   $("settingsTenant").value = TENANT_ID;
@@ -363,15 +411,9 @@ function getProfileFromForm() {
 
 async function loadBusinessProfile() {
   $("profileStatus").textContent = "Loading profile from cloud database...";
-
   try {
-    const data = await apiRequest({
-      action: "getProfile",
-      tenantId: TENANT_ID
-    });
-
+    const data = await apiRequest({action:"getProfile",tenantId:TENANT_ID});
     const profile = data.profile || data.businessProfile;
-
     if (!profile) throw new Error("The server did not return a business profile.");
 
     const isUnconfigured =
@@ -380,9 +422,7 @@ async function loadBusinessProfile() {
 
     if (isUnconfigured) {
       const saved = await apiRequest({
-        action: "saveProfile",
-        tenantId: TENANT_ID,
-        businessProfile: DEFAULT_PROFILE
+        action:"saveProfile",tenantId:TENANT_ID,businessProfile:DEFAULT_PROFILE
       });
       displayProfile(saved.profile || DEFAULT_PROFILE);
     } else {
@@ -409,14 +449,10 @@ async function saveBusinessProfile() {
 
   button.disabled = true;
   $("profileStatus").textContent = "Saving business profile to cloud database...";
-
   try {
     const data = await apiRequest({
-      action: "saveProfile",
-      tenantId: TENANT_ID,
-      businessProfile: profile
+      action:"saveProfile",tenantId:TENANT_ID,businessProfile:profile
     });
-
     displayProfile(data.profile || profile);
     $("profileStatus").textContent = "✓ Business profile saved successfully to Cloudflare D1.";
     $("activity").textContent = "Business profile updated and saved to cloud database.";
@@ -436,7 +472,6 @@ async function restoreDefaultProfile() {
   $("tone").value = DEFAULT_PROFILE.tone;
   $("goals").value = DEFAULT_PROFILE.goals;
   $("policies").value = DEFAULT_PROFILE.policies.join("\n");
-
   await saveBusinessProfile();
 }
 
@@ -456,33 +491,25 @@ function resetChat() {
 
 async function sendChat() {
   if (chatBusy) return;
-
   const input = $("chatInput");
   const message = input.value.trim();
-
   if (!message) return;
 
   chatBusy = true;
   $("sendButton").disabled = true;
   input.disabled = true;
-
   addChatMessage("user", message);
   input.value = "";
-
-  chatHistory.push({role:"user", content:message});
+  chatHistory.push({role:"user",content:message});
 
   try {
-    const data = await apiRequest({
-      tenantId: TENANT_ID,
-      messages: chatHistory
-    });
-
+    const data = await apiRequest({tenantId:TENANT_ID,messages:chatHistory});
     const reply = data.reply || "I couldn't generate a response.";
-    chatHistory.push({role:"assistant", content:reply});
-    addChatMessage("assistant", reply);
+    chatHistory.push({role:"assistant",content:reply});
+    addChatMessage("assistant",reply);
   } catch (error) {
     chatHistory.pop();
-    addChatMessage("assistant", "There was a problem connecting to the AI: " + error.message, "error");
+    addChatMessage("assistant","There was a problem connecting to the AI: " + error.message,"error");
   } finally {
     chatBusy = false;
     $("sendButton").disabled = false;
@@ -491,7 +518,7 @@ async function sendChat() {
   }
 }
 
-$("chatInput").addEventListener("keydown", event => {
+$("chatInput").addEventListener("keydown",event => {
   if (event.key === "Enter") sendChat();
 });
 
@@ -501,6 +528,90 @@ function runPhoneDemo() {
     " would answer the call, greet the customer and collect their enquiry. Live phone service is not connected yet.";
 }
 
+function makeCell(value) {
+  const cell = document.createElement("td");
+  cell.textContent = value || "—";
+  return cell;
+}
+
+function openLeadDetails(lead) {
+  currentLead = lead;
+
+  $("detailName").textContent = lead.customer_name || lead.name || "—";
+  $("detailService").textContent = lead.service || "—";
+  $("detailDate").textContent = lead.created_at || "Not available";
+  $("detailCurrentStatus").textContent = lead.status || "New";
+  $("detailMessage").textContent = lead.message || "No additional message provided.";
+
+  const phone = lead.phone || "";
+  const email = lead.email || "";
+
+  $("detailPhone").textContent = phone || "Not provided";
+  $("detailEmail").textContent = email || "Not provided";
+
+  $("callLeadButton").style.display = phone ? "inline-block" : "none";
+  $("callLeadButton").href = phone ? "tel:" + phone.replace(/[^\d+]/g,"") : "#";
+
+  $("emailLeadButton").style.display = email ? "inline-block" : "none";
+  $("emailLeadButton").href = email ? "mailto:" + email : "#";
+
+  const allowed = ["New","Contacted","Booked","Closed"];
+  const current = allowed.find(s => s.toLowerCase() === String(lead.status || "New").toLowerCase()) || "New";
+  $("detailStatus").value = current;
+  $("leadDetailStatus").textContent = "";
+  $("leadModal").hidden = false;
+}
+
+function closeLeadDetails() {
+  $("leadModal").hidden = true;
+  currentLead = null;
+}
+
+$("leadModal").addEventListener("click",event => {
+  if (event.target === $("leadModal")) closeLeadDetails();
+});
+
+document.addEventListener("keydown",event => {
+  if (event.key === "Escape" && !$("leadModal").hidden) closeLeadDetails();
+});
+
+async function saveLeadStatus() {
+  if (!currentLead || !currentLead.id) {
+    $("leadDetailStatus").textContent = "This lead has no record ID, so its status cannot be updated.";
+    return;
+  }
+
+  const button = $("saveLeadStatusButton");
+  button.disabled = true;
+  $("leadDetailStatus").textContent = "Updating lead status...";
+
+  try {
+    const response = await fetch("/api/leads", {
+      method:"PATCH",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        id:currentLead.id,
+        tenantId:TENANT_ID,
+        status:$("detailStatus").value
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Could not update lead status.");
+    }
+
+    currentLead.status = $("detailStatus").value;
+    $("detailCurrentStatus").textContent = currentLead.status;
+    $("leadDetailStatus").textContent = "✓ Lead status updated.";
+    await loadLeads();
+  } catch (error) {
+    $("leadDetailStatus").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function loadLeads() {
   try {
     const response = await fetch("/api/leads?tenantId=" + encodeURIComponent(TENANT_ID));
@@ -508,29 +619,53 @@ async function loadLeads() {
 
     const data = await response.json();
     const leads = Array.isArray(data) ? data : (data.leads || []);
+    cachedLeads = leads;
 
     $("leadCount").textContent = leads.length;
     $("leadsTable").innerHTML = "";
 
     if (!leads.length) {
-      $("leadsTable").innerHTML = '<tr><td colspan="4" class="muted">No leads yet.</td></tr>';
+      $("leadsTable").innerHTML = '<tr><td colspan="5" class="empty-state">No leads yet.</td></tr>';
       return;
     }
 
     leads.forEach(lead => {
       const row = document.createElement("tr");
-      [lead.customer_name || lead.name || "",
-       lead.service || "",
-       lead.email || "",
-       lead.status || "new"].forEach(value => {
-        const cell = document.createElement("td");
-        cell.textContent = value;
-        row.appendChild(cell);
+      row.className = "lead-row";
+      row.tabIndex = 0;
+      row.setAttribute("role","button");
+      row.setAttribute("aria-label","Open lead details for " + (lead.customer_name || lead.name || "customer"));
+
+      row.appendChild(makeCell(lead.customer_name || lead.name || ""));
+      row.appendChild(makeCell(lead.service || ""));
+      row.appendChild(makeCell(lead.email || ""));
+
+      const phoneCell = document.createElement("td");
+      if (lead.phone) {
+        const link = document.createElement("a");
+        link.className = "contact-link";
+        link.href = "tel:" + String(lead.phone).replace(/[^\d+]/g,"");
+        link.textContent = lead.phone;
+        link.addEventListener("click",event => event.stopPropagation());
+        phoneCell.appendChild(link);
+      } else {
+        phoneCell.textContent = "—";
+      }
+      row.appendChild(phoneCell);
+      row.appendChild(makeCell(lead.status || "New"));
+
+      row.addEventListener("click",() => openLeadDetails(lead));
+      row.addEventListener("keydown",event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openLeadDetails(lead);
+        }
       });
+
       $("leadsTable").appendChild(row);
     });
   } catch (error) {
-    $("leadsTable").innerHTML = '<tr><td colspan="4" class="muted">Could not load leads.</td></tr>';
+    $("leadsTable").innerHTML = '<tr><td colspan="5" class="empty-state">Could not load leads.</td></tr>';
     $("leadStatus").textContent = error.message;
   }
 }
@@ -538,16 +673,16 @@ async function loadLeads() {
 async function addLead() {
   const button = $("addLeadButton");
   const lead = {
-    tenantId: TENANT_ID,
-    customer_name: $("leadName").value.trim(),
-    email: $("leadEmail").value.trim(),
-    phone: $("leadPhone").value.trim(),
-    service: $("leadService").value.trim(),
-    message: $("leadMessage").value.trim()
+    tenantId:TENANT_ID,
+    customer_name:$("leadName").value.trim(),
+    email:$("leadEmail").value.trim(),
+    phone:$("leadPhone").value.trim(),
+    service:$("leadService").value.trim(),
+    message:$("leadMessage").value.trim()
   };
 
-  if (!lead.customer_name) {
-    $("leadStatus").textContent = "Please enter the customer's name.";
+  if (!lead.customer_name || !lead.service) {
+    $("leadStatus").textContent = "Please enter the customer's name and requested service.";
     return;
   }
 
@@ -560,10 +695,9 @@ async function addLead() {
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(lead)
     });
-
     const data = await response.json();
 
-    if (!response.ok || data.success === false) {
+    if (!response.ok || data.success !== true) {
       throw new Error(data.error || "Unable to save lead.");
     }
 
