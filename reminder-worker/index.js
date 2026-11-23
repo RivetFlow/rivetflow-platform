@@ -60,9 +60,8 @@ export default {
             subject: "RivetFlow — Test Email",
             html: `
               <h2>RivetFlow Email Test Successful</h2>
-              <p>This is a test message from your RivetFlow Reminder Engine.</p>
-              <p>Your Resend connection is working.</p>
-              <p>No customer reminders were sent or changed.</p>
+              <p>Your RivetFlow Reminder Engine is connected to Resend.</p>
+              <p>This was a test only. No customer reminders were sent or changed.</p>
             `
           })
         });
@@ -99,62 +98,91 @@ async function sendReminders(env) {
   }
 
   const result = await env.DB.prepare(`
-    SELECT l.id, l.customer_name, l.service, l.follow_up_at,
-           l.priority, l.next_action, t.business_name
+    SELECT
+      l.id,
+      l.tenant_id,
+      l.customer_name,
+      l.service,
+      l.follow_up_at,
+      l.priority,
+      l.next_action,
+      t.business_name,
+      t.notification_email
     FROM leads l
-    LEFT JOIN tenants t ON t.id = l.tenant_id
+    INNER JOIN tenants t ON t.id = l.tenant_id
     LEFT JOIN lead_reminders r ON r.lead_id = l.id
     WHERE l.follow_up_at <= date('now')
       AND COALESCE(l.follow_up_completed, 0) = 0
       AND r.lead_id IS NULL
-    ORDER BY l.follow_up_at ASC
+      AND t.notification_email IS NOT NULL
+      AND TRIM(t.notification_email) != ''
+    ORDER BY l.tenant_id, l.follow_up_at ASC
   `).all();
 
   const leads = result.results || [];
   if (!leads.length) return;
 
-  const rows = leads.map(lead => `
-    <tr>
-      <td>${escapeHtml(lead.customer_name)}</td>
-      <td>${escapeHtml(lead.service || "General enquiry")}</td>
-      <td>${escapeHtml(lead.priority || "Normal")}</td>
-      <td>${escapeHtml(lead.business_name || "Your business")}</td>
-    </tr>
-  `).join("");
-
-  const response = await fetch(RESEND_API, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: FROM_EMAIL,
-      to: [REMINDER_EMAIL],
-      subject: `RivetFlow: ${leads.length} lead(s) need follow-up`,
-      html: `
-        <h2>RivetFlow Follow-Up Reminder</h2>
-        <p>You have ${leads.length} lead(s) requiring attention.</p>
-        <table border="1" cellpadding="8" cellspacing="0">
-          <tr><th>Customer</th><th>Service</th><th>Priority</th><th>Business</th></tr>
-          ${rows}
-        </table>
-        <p>Open your RivetFlow dashboard to manage these leads.</p>
-      `
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Resend email failed: ${await response.text()}`);
-  }
+  const groups = new Map();
 
   for (const lead of leads) {
-    await env.DB.prepare(`
-      INSERT OR IGNORE INTO lead_reminders (lead_id, tenant_id, sent_at)
-      SELECT id, tenant_id, datetime('now')
-      FROM leads
-      WHERE id = ?
-    `).bind(lead.id).run();
+    if (!groups.has(lead.tenant_id)) {
+      groups.set(lead.tenant_id, {
+        email: lead.notification_email,
+        business: lead.business_name || "Your business",
+        leads: []
+      });
+    }
+
+    groups.get(lead.tenant_id).leads.push(lead);
+  }
+
+  for (const group of groups.values()) {
+    const rows = group.leads.map(lead => `
+      <tr>
+        <td>${escapeHtml(lead.customer_name)}</td>
+        <td>${escapeHtml(lead.service || "General enquiry")}</td>
+        <td>${escapeHtml(lead.priority || "Normal")}</td>
+        <td>${escapeHtml(lead.follow_up_at || "")}</td>
+      </tr>
+    `).join("");
+
+    const response = await fetch(RESEND_API, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [group.email],
+        subject: `RivetFlow: ${group.leads.length} lead(s) need follow-up`,
+        html: `
+          <h2>RivetFlow Follow-Up Reminder</h2>
+          <p>${escapeHtml(group.business)} has ${group.leads.length} lead(s) requiring attention.</p>
+          <table border="1" cellpadding="8" cellspacing="0">
+            <tr>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Priority</th>
+              <th>Follow-up date</th>
+            </tr>
+            ${rows}
+          </table>
+          <p>Open your RivetFlow dashboard to manage these leads.</p>
+        `
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Resend email failed: ${await response.text()}`);
+    }
+
+    for (const lead of group.leads) {
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO lead_reminders (lead_id, tenant_id, sent_at)
+        VALUES (?, ?, datetime('now'))
+      `).bind(lead.id, lead.tenant_id).run();
+    }
   }
 }
 
