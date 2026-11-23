@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RivetFlow AI | Control Centre</title>
 <style>
-:root{--bg:#0b1018;--panel:#121b27;--panel2:#182433;--line:#263548;--text:#f2f5f9;--muted:#91a0b3;--blue:#4d8dff;--green:#35c98b;--red:#ff6b6b}
+:root{--bg:#0b1018;--panel:#121b27;--panel2:#182433;--line:#263548;--text:#f2f5f9;--muted:#91a0b3;--blue:#4d8dff;--green:#35c98b;--red:#ff6b6b;--orange:#ffad55}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
 button,input,textarea,select{font:inherit}
@@ -24,7 +24,7 @@ h1{font-size:25px;margin:0 0 7px}
 .status{color:var(--green);font-size:12px}
 .page{display:none}
 .page.active{display:block}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px;margin-bottom:20px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px}
 .metric-label{color:var(--muted);font-size:13px}
 .metric{font-size:28px;font-weight:700;margin-top:12px}
@@ -46,29 +46,32 @@ label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}
 .message.error{background:#402126;border:1px solid #75404a}
 .chat-controls{display:flex;gap:9px}
 .chat-controls input{flex:1;min-width:0}
-.chat-note{margin-top:10px}
-.phone-demo{border:1px solid var(--line);background:#0c1420;border-radius:10px;padding:20px}
 .badge{display:inline-block;background:#203b60;color:#9fc2ff;padding:5px 8px;border-radius:20px;font-size:11px}
 .profile-status{font-size:12px;color:var(--green);margin-top:10px}
 .table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;text-align:left;font-size:13px;min-width:650px}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:13px;min-width:750px}
 th,td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
 th{color:var(--muted)}
 .lead-row{cursor:pointer}
 .lead-row:hover{background:var(--panel2)}
 .lead-row:focus{outline:2px solid var(--blue);outline-offset:-2px}
+.priority{display:inline-block;padding:5px 9px;border-radius:20px;font-size:11px;text-transform:capitalize;background:#263548;color:#d5dfed}
+.priority.urgent{background:#54262c;color:#ff9696}
+.priority.high{background:#57391e;color:#ffc078}
+.priority.normal{background:#203b60;color:#9fc2ff}
+.priority.low{background:#263548;color:#b5c2d2}
 a.contact-link{color:#9fc2ff;text-decoration:underline}
 .empty-state{padding:18px;color:var(--muted)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:1000;display:flex;align-items:center;justify-content:center;padding:18px}
 .modal[hidden]{display:none}
-.modal-panel{width:100%;max-width:650px;max-height:90vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+.modal-panel{width:100%;max-width:700px;max-height:90vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
 .modal-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
 .modal-header h2{font-size:20px;margin:0}
 .close-button{background:var(--panel2);border:1px solid var(--line);color:white;border-radius:8px;padding:8px 12px;cursor:pointer}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .detail-item{background:#0c1420;border:1px solid var(--line);border-radius:9px;padding:13px;min-width:0}
 .detail-label{font-size:11px;color:var(--muted);margin-bottom:7px}
-.detail-value{font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap}
+.detail-value{font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.5}
 .detail-message{margin-top:14px}
 .detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 .modal-status{margin-top:12px;color:var(--muted);font-size:13px}
@@ -112,8 +115,9 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 <section class="page active" id="overview">
   <div class="grid">
     <div class="card"><div class="metric-label">Total leads</div><div class="metric" id="leadCount">0</div></div>
-    <div class="card"><div class="metric-label">Website AI</div><div class="metric">Active</div></div>
-    <div class="card"><div class="metric-label">Phone AI</div><div class="metric">Demo</div></div>
+    <div class="card"><div class="metric-label">Urgent leads</div><div class="metric" id="urgentCount">0</div></div>
+    <div class="card"><div class="metric-label">High priority</div><div class="metric" id="highCount">0</div></div>
+    <div class="card"><div class="metric-label">Needs follow-up</div><div class="metric" id="followUpCount">0</div></div>
   </div>
   <div class="card">
     <h2 class="section-title">Welcome to RivetFlow AI</h2>
@@ -130,10 +134,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
   <div class="card">
     <h2 class="section-title">Business Profile Manager</h2>
     <p class="muted">Your business profile is saved in the RivetFlow cloud database.</p>
-    <div class="field">
-      <label for="businessName">Business name</label>
-      <input id="businessName" placeholder="Enter your business name">
-    </div>
+    <div class="field"><label for="businessName">Business name</label><input id="businessName" placeholder="Enter your business name"></div>
     <div class="field">
       <label for="industry">Industry</label>
       <select id="industry">
@@ -151,18 +152,9 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
         <option value="Other">Other</option>
       </select>
     </div>
-    <div class="field">
-      <label for="description">Business description</label>
-      <textarea id="description" placeholder="Describe what your business does"></textarea>
-    </div>
-    <div class="field">
-      <label for="services">Services offered (one per line)</label>
-      <textarea id="services" placeholder="Service one&#10;Service two"></textarea>
-    </div>
-    <div class="field">
-      <label for="serviceArea">Service area</label>
-      <input id="serviceArea" placeholder="Cities, regions or online">
-    </div>
+    <div class="field"><label for="description">Business description</label><textarea id="description" placeholder="Describe what your business does"></textarea></div>
+    <div class="field"><label for="services">Services offered (one per line)</label><textarea id="services" placeholder="Service one&#10;Service two"></textarea></div>
+    <div class="field"><label for="serviceArea">Service area</label><input id="serviceArea" placeholder="Cities, regions or online"></div>
     <div class="field">
       <label for="tone">AI communication style</label>
       <select id="tone">
@@ -172,14 +164,8 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
         <option value="Concise and direct">Concise and direct</option>
       </select>
     </div>
-    <div class="field">
-      <label for="goals">Business goals</label>
-      <textarea id="goals" placeholder="What should your AI assistant help your business accomplish?"></textarea>
-    </div>
-    <div class="field">
-      <label for="policies">Business policies (one per line)</label>
-      <textarea id="policies" placeholder="Policy one&#10;Policy two"></textarea>
-    </div>
+    <div class="field"><label for="goals">Business goals</label><textarea id="goals" placeholder="What should your AI assistant help your business accomplish?"></textarea></div>
+    <div class="field"><label for="policies">Business policies (one per line)</label><textarea id="policies" placeholder="Policy one&#10;Policy two"></textarea></div>
     <button class="primary" id="saveProfileButton" onclick="saveBusinessProfile()">Save Business Profile</button>
     <button class="secondary" id="resetProfileButton" onclick="restoreDefaultProfile()">Restore Demo Profile</button>
     <div class="profile-status" id="profileStatus">Loading saved business profile...</div>
@@ -189,7 +175,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 <section class="page" id="leads">
   <div class="card">
     <h2 class="section-title">Lead Management</h2>
-    <p class="muted">View and add customer leads for this business workspace.</p>
+    <p class="muted">View, add and manage customer enquiries for this business workspace.</p>
     <div class="grid">
       <div class="field"><label for="leadName">Customer name</label><input id="leadName" placeholder="Customer name"></div>
       <div class="field"><label for="leadEmail">Email</label><input id="leadEmail" type="email" placeholder="Email address"></div>
@@ -200,12 +186,15 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
     <button class="primary" id="addLeadButton" onclick="addLead()">Add Lead</button>
     <p class="muted" id="leadStatus"></p>
   </div>
+
   <div class="card">
     <h2 class="section-title">Customer Leads</h2>
-    <p class="muted">Select any lead to view its full details and update its status.</p>
+    <p class="muted">Select any lead to view its AI analysis, contact details and follow-up recommendations.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Name</th><th>Service</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead>
+        <thead>
+          <tr><th>Name</th><th>Service</th><th>Priority</th><th>Category</th><th>Status</th></tr>
+        </thead>
         <tbody id="leadsTable"><tr><td colspan="5" class="muted">Loading leads...</td></tr></tbody>
       </table>
     </div>
@@ -221,7 +210,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
       <input id="chatInput" placeholder="Type a customer question..." autocomplete="off">
       <button class="primary" id="sendButton" onclick="sendChat()">Send</button>
     </div>
-    <div class="chat-note muted">The assistant uses the business profile saved in your cloud database.</div>
+    <div class="muted" style="margin-top:10px">The assistant uses the business profile saved in your cloud database.</div>
     <button class="secondary" style="margin-top:12px" onclick="resetChat()">Reset conversation</button>
   </div>
 </section>
@@ -230,7 +219,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
   <div class="card">
     <h2 class="section-title">Phone AI Receptionist</h2>
     <p class="muted">Explore the phone assistant experience. Live phone integration is not connected yet.</p>
-    <div class="phone-demo">
+    <div class="card" style="background:#0c1420">
       <span class="badge">SIMULATION</span>
       <h3>AI Receptionist</h3>
       <p class="muted">Your AI receptionist will eventually be able to answer calls, understand customer needs and capture enquiries.</p>
@@ -257,32 +246,63 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 <div class="modal" id="leadModal" hidden>
   <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="leadModalTitle">
     <div class="modal-header">
-      <h2 id="leadModalTitle">Lead details</h2>
+      <h2 id="leadModalTitle">Lead intelligence</h2>
       <button class="close-button" onclick="closeLeadDetails()">Close</button>
     </div>
+
     <div class="detail-grid">
       <div class="detail-item"><div class="detail-label">Customer name</div><div class="detail-value" id="detailName">—</div></div>
       <div class="detail-item"><div class="detail-label">Service requested</div><div class="detail-value" id="detailService">—</div></div>
       <div class="detail-item"><div class="detail-label">Phone number</div><div class="detail-value" id="detailPhone">—</div></div>
       <div class="detail-item"><div class="detail-label">Email address</div><div class="detail-value" id="detailEmail">—</div></div>
       <div class="detail-item"><div class="detail-label">Date received</div><div class="detail-value" id="detailDate">—</div></div>
-      <div class="detail-item"><div class="detail-label">Current status</div><div class="detail-value" id="detailCurrentStatus">—</div></div>
+      <div class="detail-item"><div class="detail-label">Service category</div><div class="detail-value" id="detailCategory">General</div></div>
+      <div class="detail-item"><div class="detail-label">AI priority</div><div class="detail-value" id="detailPriority">Normal</div></div>
+      <div class="detail-item"><div class="detail-label">Current status</div><div class="detail-value" id="detailCurrentStatus">New</div></div>
     </div>
+
+    <div class="detail-item detail-message">
+      <div class="detail-label">AI enquiry summary</div>
+      <div class="detail-value" id="detailSummary">No AI summary available.</div>
+    </div>
+
+    <div class="detail-item detail-message">
+      <div class="detail-label">Recommended next action</div>
+      <div class="detail-value" id="detailNextAction">No recommendation available.</div>
+    </div>
+
     <div class="detail-item detail-message">
       <div class="detail-label">Customer message and service address</div>
       <div class="detail-value" id="detailMessage">No additional message provided.</div>
     </div>
-    <div class="field" style="margin-top:18px">
-      <label for="detailStatus">Update lead status</label>
-      <select id="detailStatus">
-        <option value="New">New</option>
-        <option value="Contacted">Contacted</option>
-        <option value="Booked">Booked</option>
-        <option value="Closed">Closed</option>
-      </select>
+
+    <div class="detail-grid" style="margin-top:15px">
+      <div class="field">
+        <label for="detailStatus">Lead status</label>
+        <select id="detailStatus">
+          <option value="New">New</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Booked">Booked</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="detailPrioritySelect">Lead priority</label>
+        <select id="detailPrioritySelect">
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="normal">Normal</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="detailFollowUp">Follow-up date</label>
+        <input id="detailFollowUp" type="date">
+      </div>
     </div>
+
     <div class="detail-actions">
-      <button class="primary" id="saveLeadStatusButton" onclick="saveLeadStatus()">Save Status</button>
+      <button class="primary" id="saveLeadStatusButton" onclick="saveLeadStatus()">Save Lead Updates</button>
       <a class="secondary" id="callLeadButton" href="#" style="display:none;text-decoration:none">Call customer</a>
       <a class="secondary" id="emailLeadButton" href="#" style="display:none;text-decoration:none">Email customer</a>
     </div>
@@ -297,17 +317,14 @@ const TENANT_ID = "northstar-demo";
 const API_ENDPOINT = "/api/ai-test";
 
 const DEFAULT_PROFILE = {
-  businessName: "Northstar Renovations",
-  industry: "Roofing and construction",
-  description: "Northstar Renovations provides professional roofing and renovation services.",
-  services: ["Roof repairs","Roof replacement","Roof inspections","Renovations"],
-  serviceArea: "Ontario",
-  tone: "Friendly and professional",
-  goals: "Answer customer questions, understand their needs and help them submit an enquiry.",
-  policies: [
-    "Do not invent prices or estimates.",
-    "Do not promise appointment times unless confirmed."
-  ]
+  businessName:"Northstar Renovations",
+  industry:"Roofing and construction",
+  description:"Northstar Renovations provides professional roofing and renovation services.",
+  services:["Roof repairs","Roof replacement","Roof inspections","Renovations"],
+  serviceArea:"Ontario",
+  tone:"Friendly and professional",
+  goals:"Answer customer questions, understand their needs and help them submit an enquiry.",
+  policies:["Do not invent prices or estimates.","Do not promise appointment times unless confirmed."]
 };
 
 let businessProfile = {...DEFAULT_PROFILE};
@@ -319,10 +336,10 @@ let cachedLeads = [];
 const $ = id => document.getElementById(id);
 
 async function apiRequest(payload) {
-  const response = await fetch(API_ENDPOINT, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(payload)
+  const response = await fetch(API_ENDPOINT,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
   });
 
   let data;
@@ -340,24 +357,25 @@ async function apiRequest(payload) {
 
 function showPage(page) {
   document.querySelectorAll(".page").forEach(section => {
-    section.classList.toggle("active", section.id === page);
+    section.classList.toggle("active",section.id === page);
   });
 
   document.querySelectorAll(".nav button").forEach(button => {
-    button.classList.toggle("active", button.dataset.page === page);
+    button.classList.toggle("active",button.dataset.page === page);
   });
 
   const titles = {
     overview:"Overview",profile:"Business Profile",leads:"Leads",
     website:"Website AI",phone:"Phone AI",settings:"Settings"
   };
+
   $("pageTitle").textContent = titles[page] || "Overview";
 
   if (page === "leads") loadLeads();
 }
 
 document.querySelectorAll(".nav button").forEach(button => {
-  button.addEventListener("click", () => showPage(button.dataset.page));
+  button.addEventListener("click",() => showPage(button.dataset.page));
 });
 
 function toLines(value) {
@@ -373,14 +391,14 @@ function cleanArray(value) {
 
 function displayProfile(profile) {
   businessProfile = {
-    businessName: profile.businessName || profile.business_name || DEFAULT_PROFILE.businessName,
-    industry: profile.industry || DEFAULT_PROFILE.industry,
-    description: profile.description || "",
-    services: cleanArray(profile.services),
-    serviceArea: profile.serviceArea || profile.service_area || "",
-    tone: profile.tone || DEFAULT_PROFILE.tone,
-    goals: profile.goals || "",
-    policies: cleanArray(profile.policies)
+    businessName:profile.businessName || profile.business_name || DEFAULT_PROFILE.businessName,
+    industry:profile.industry || DEFAULT_PROFILE.industry,
+    description:profile.description || "",
+    services:cleanArray(profile.services),
+    serviceArea:profile.serviceArea || profile.service_area || "",
+    tone:profile.tone || DEFAULT_PROFILE.tone,
+    goals:profile.goals || "",
+    policies:cleanArray(profile.policies)
   };
 
   $("businessName").value = businessProfile.businessName;
@@ -398,22 +416,24 @@ function displayProfile(profile) {
 
 function getProfileFromForm() {
   return {
-    businessName: $("businessName").value.trim(),
-    industry: $("industry").value,
-    description: $("description").value.trim(),
-    services: cleanArray($("services").value),
-    serviceArea: $("serviceArea").value.trim(),
-    tone: $("tone").value,
-    goals: $("goals").value.trim(),
-    policies: cleanArray($("policies").value)
+    businessName:$("businessName").value.trim(),
+    industry:$("industry").value,
+    description:$("description").value.trim(),
+    services:cleanArray($("services").value),
+    serviceArea:$("serviceArea").value.trim(),
+    tone:$("tone").value,
+    goals:$("goals").value.trim(),
+    policies:cleanArray($("policies").value)
   };
 }
 
 async function loadBusinessProfile() {
   $("profileStatus").textContent = "Loading profile from cloud database...";
+
   try {
     const data = await apiRequest({action:"getProfile",tenantId:TENANT_ID});
     const profile = data.profile || data.businessProfile;
+
     if (!profile) throw new Error("The server did not return a business profile.");
 
     const isUnconfigured =
@@ -449,10 +469,12 @@ async function saveBusinessProfile() {
 
   button.disabled = true;
   $("profileStatus").textContent = "Saving business profile to cloud database...";
+
   try {
     const data = await apiRequest({
       action:"saveProfile",tenantId:TENANT_ID,businessProfile:profile
     });
+
     displayProfile(data.profile || profile);
     $("profileStatus").textContent = "✓ Business profile saved successfully to Cloudflare D1.";
     $("activity").textContent = "Business profile updated and saved to cloud database.";
@@ -475,7 +497,7 @@ async function restoreDefaultProfile() {
   await saveBusinessProfile();
 }
 
-function addChatMessage(role, content, extraClass = "") {
+function addChatMessage(role,content,extraClass="") {
   const message = document.createElement("div");
   message.className = "message " + (role === "user" ? "user" : "ai") + (extraClass ? " " + extraClass : "");
   message.textContent = content;
@@ -486,27 +508,36 @@ function addChatMessage(role, content, extraClass = "") {
 function resetChat() {
   chatHistory = [];
   $("chatBox").innerHTML = "";
-  addChatMessage("assistant", "Hello! I'm the AI assistant for " + businessProfile.businessName + ". How can I help you today?");
+  addChatMessage("assistant","Hello! I'm the AI assistant for " + businessProfile.businessName + ". How can I help you today?");
 }
 
 async function sendChat() {
   if (chatBusy) return;
+
   const input = $("chatInput");
   const message = input.value.trim();
+
   if (!message) return;
 
   chatBusy = true;
   $("sendButton").disabled = true;
   input.disabled = true;
-  addChatMessage("user", message);
+
+  addChatMessage("user",message);
   input.value = "";
   chatHistory.push({role:"user",content:message});
 
   try {
     const data = await apiRequest({tenantId:TENANT_ID,messages:chatHistory});
     const reply = data.reply || "I couldn't generate a response.";
+
     chatHistory.push({role:"assistant",content:reply});
     addChatMessage("assistant",reply);
+
+    if (data.leadSaved) {
+      $("activity").textContent = "A new customer enquiry was saved with AI lead intelligence.";
+      await loadLeads();
+    }
   } catch (error) {
     chatHistory.pop();
     addChatMessage("assistant","There was a problem connecting to the AI: " + error.message,"error");
@@ -534,13 +565,42 @@ function makeCell(value) {
   return cell;
 }
 
+function formatPriority(priority) {
+  const allowed = ["urgent","high","normal","low"];
+  const value = String(priority || "normal").toLowerCase();
+  return allowed.includes(value) ? value : "normal";
+}
+
+function addPriorityCell(row,priority) {
+  const cell = document.createElement("td");
+  const badge = document.createElement("span");
+  const value = formatPriority(priority);
+  badge.className = "priority " + value;
+  badge.textContent = value;
+  cell.appendChild(badge);
+  row.appendChild(cell);
+}
+
+function formatDate(value) {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString();
+}
+
 function openLeadDetails(lead) {
   currentLead = lead;
 
   $("detailName").textContent = lead.customer_name || lead.name || "—";
   $("detailService").textContent = lead.service || "—";
-  $("detailDate").textContent = lead.created_at || "Not available";
+  $("detailDate").textContent = formatDate(lead.created_at);
   $("detailCurrentStatus").textContent = lead.status || "New";
+  $("detailCategory").textContent = lead.category || "General";
+  $("detailPriority").textContent = formatPriority(lead.priority);
+  $("detailSummary").textContent = lead.ai_summary || "No AI summary available for this lead.";
+  $("detailNextAction").textContent = lead.next_action || "No AI recommendation available for this lead.";
   $("detailMessage").textContent = lead.message || "No additional message provided.";
 
   const phone = lead.phone || "";
@@ -557,7 +617,13 @@ function openLeadDetails(lead) {
 
   const allowed = ["New","Contacted","Booked","Closed"];
   const current = allowed.find(s => s.toLowerCase() === String(lead.status || "New").toLowerCase()) || "New";
+
   $("detailStatus").value = current;
+  $("detailPrioritySelect").value = formatPriority(lead.priority);
+
+  const followUp = lead.follow_up_at || "";
+  $("detailFollowUp").value = followUp ? followUp.slice(0,10) : "";
+
   $("leadDetailStatus").textContent = "";
   $("leadModal").hidden = false;
 }
@@ -577,33 +643,43 @@ document.addEventListener("keydown",event => {
 
 async function saveLeadStatus() {
   if (!currentLead || !currentLead.id) {
-    $("leadDetailStatus").textContent = "This lead has no record ID, so its status cannot be updated.";
+    $("leadDetailStatus").textContent = "This lead has no record ID, so its updates cannot be saved.";
     return;
   }
 
   const button = $("saveLeadStatusButton");
   button.disabled = true;
-  $("leadDetailStatus").textContent = "Updating lead status...";
+  $("leadDetailStatus").textContent = "Saving lead updates...";
+
+  const updates = {
+    id:currentLead.id,
+    tenantId:TENANT_ID,
+    status:$("detailStatus").value,
+    priority:$("detailPrioritySelect").value,
+    follow_up_at:$("detailFollowUp").value || null
+  };
 
   try {
-    const response = await fetch("/api/leads", {
+    const response = await fetch("/api/leads",{
       method:"PATCH",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        id:currentLead.id,
-        tenantId:TENANT_ID,
-        status:$("detailStatus").value
-      })
+      body:JSON.stringify(updates)
     });
 
     const data = await response.json();
+
     if (!response.ok || !data.success) {
-      throw new Error(data.error || "Could not update lead status.");
+      throw new Error(data.error || "Could not update lead.");
     }
 
-    currentLead.status = $("detailStatus").value;
-    $("detailCurrentStatus").textContent = currentLead.status;
-    $("leadDetailStatus").textContent = "✓ Lead status updated.";
+    currentLead.status = updates.status;
+    currentLead.priority = updates.priority;
+    currentLead.follow_up_at = updates.follow_up_at;
+
+    $("detailCurrentStatus").textContent = updates.status;
+    $("detailPriority").textContent = updates.priority;
+
+    $("leadDetailStatus").textContent = "✓ Lead updates saved successfully.";
     await loadLeads();
   } catch (error) {
     $("leadDetailStatus").textContent = error.message;
@@ -612,16 +688,35 @@ async function saveLeadStatus() {
   }
 }
 
+function updateOverview(leads) {
+  $("leadCount").textContent = leads.length;
+
+  $("urgentCount").textContent = leads.filter(
+    lead => formatPriority(lead.priority) === "urgent"
+  ).length;
+
+  $("highCount").textContent = leads.filter(
+    lead => formatPriority(lead.priority) === "high"
+  ).length;
+
+  $("followUpCount").textContent = leads.filter(
+    lead => Boolean(lead.follow_up_at)
+  ).length;
+}
+
 async function loadLeads() {
   try {
-    const response = await fetch("/api/leads?tenantId=" + encodeURIComponent(TENANT_ID));
+    const response = await fetch(
+      "/api/leads?tenantId=" + encodeURIComponent(TENANT_ID)
+    );
+
     if (!response.ok) throw new Error("Unable to load leads.");
 
     const data = await response.json();
     const leads = Array.isArray(data) ? data : (data.leads || []);
-    cachedLeads = leads;
 
-    $("leadCount").textContent = leads.length;
+    cachedLeads = leads;
+    updateOverview(leads);
     $("leadsTable").innerHTML = "";
 
     if (!leads.length) {
@@ -638,23 +733,12 @@ async function loadLeads() {
 
       row.appendChild(makeCell(lead.customer_name || lead.name || ""));
       row.appendChild(makeCell(lead.service || ""));
-      row.appendChild(makeCell(lead.email || ""));
-
-      const phoneCell = document.createElement("td");
-      if (lead.phone) {
-        const link = document.createElement("a");
-        link.className = "contact-link";
-        link.href = "tel:" + String(lead.phone).replace(/[^\d+]/g,"");
-        link.textContent = lead.phone;
-        link.addEventListener("click",event => event.stopPropagation());
-        phoneCell.appendChild(link);
-      } else {
-        phoneCell.textContent = "—";
-      }
-      row.appendChild(phoneCell);
+      addPriorityCell(row,lead.priority);
+      row.appendChild(makeCell(lead.category || "General"));
       row.appendChild(makeCell(lead.status || "New"));
 
       row.addEventListener("click",() => openLeadDetails(lead));
+
       row.addEventListener("keydown",event => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -672,6 +756,7 @@ async function loadLeads() {
 
 async function addLead() {
   const button = $("addLeadButton");
+
   const lead = {
     tenantId:TENANT_ID,
     customer_name:$("leadName").value.trim(),
@@ -690,11 +775,12 @@ async function addLead() {
   $("leadStatus").textContent = "Saving lead...";
 
   try {
-    const response = await fetch("/api/leads", {
+    const response = await fetch("/api/leads",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(lead)
     });
+
     const data = await response.json();
 
     if (!response.ok || data.success !== true) {
@@ -702,6 +788,7 @@ async function addLead() {
     }
 
     ["leadName","leadEmail","leadPhone","leadService","leadMessage"].forEach(id => $(id).value = "");
+
     $("leadStatus").textContent = "Lead saved successfully.";
     await loadLeads();
   } catch (error) {
