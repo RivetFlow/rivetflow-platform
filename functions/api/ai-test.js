@@ -356,6 +356,28 @@ function parseAIJson(raw) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
+// Calculate a follow-up date from the lead priority.
+function calculateFollowUpDate(priority) {
+  const daysByPriority = {
+    urgent: 0,
+    high: 1,
+    normal: 3,
+    low: 7,
+  };
+
+  const days = daysByPriority[priority] ?? 3;
+  const date = new Date();
+
+  // Use UTC date arithmetic for a consistent YYYY-MM-DD value.
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+
+  const followUp = new Date(Date.UTC(year, month, day + days));
+
+  return followUp.toISOString().slice(0, 10);
+}
+
 // Extract customer details and analyze the enquiry for the CRM.
 async function analyzeLead(env, messages, business) {
   const extractionPrompt = `
@@ -470,6 +492,10 @@ ${JSON.stringify(messages)}
 
   const proposedPriority = String(lead.priority || "normal").toLowerCase();
 
+  const priority = allowedPriorities.includes(proposedPriority)
+    ? proposedPriority
+    : "normal";
+
   return {
     customerName: cleanText(lead.customerName, 120),
     email: cleanText(lead.email, 150),
@@ -477,12 +503,11 @@ ${JSON.stringify(messages)}
     service: cleanText(lead.service, 200),
     address: cleanText(lead.address, 250),
     details: cleanText(lead.details, 1000),
-    priority: allowedPriorities.includes(proposedPriority)
-      ? proposedPriority
-      : "normal",
+    priority,
     category: cleanText(lead.category, 150) || "general",
     aiSummary: cleanText(lead.aiSummary, 1000),
     nextAction: cleanText(lead.nextAction, 500),
+    followUpAt: calculateFollowUpDate(priority),
   };
 }
 
@@ -533,6 +558,26 @@ async function saveCustomerLead(db, tenantId, lead) {
   ).first();
 
   if (existing) {
+    // Fill missing intelligence on an existing duplicate lead.
+    await db.prepare(`
+      UPDATE leads
+      SET
+        priority = ?,
+        category = ?,
+        follow_up_at = COALESCE(follow_up_at, ?),
+        ai_summary = COALESCE(NULLIF(ai_summary, ''), ?),
+        next_action = COALESCE(NULLIF(next_action, ''), ?)
+      WHERE id = ? AND tenant_id = ?
+    `).bind(
+      lead.priority || "normal",
+      lead.category || "general",
+      lead.followUpAt,
+      lead.aiSummary || lead.details || lead.service,
+      lead.nextAction || "Review the enquiry and follow up with the customer.",
+      existing.id,
+      tenantId
+    ).run();
+
     return {
       saved: true,
       duplicate: true,
@@ -570,7 +615,7 @@ async function saveCustomerLead(db, tenantId, lead) {
     "New",
     lead.priority || "normal",
     lead.category || "general",
-    null,
+    lead.followUpAt,
     lead.aiSummary || lead.details || lead.service,
     lead.nextAction || "Review the enquiry and follow up with the customer."
   ).run();
@@ -758,6 +803,7 @@ export async function onRequestPost({ request, env }) {
             category: lead.category,
             aiSummary: lead.aiSummary,
             nextAction: lead.nextAction,
+            followUpAt: lead.followUpAt,
           };
 
           reply =
