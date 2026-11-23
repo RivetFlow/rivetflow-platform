@@ -9,10 +9,15 @@ function cleanText(value, maxLength = 2000) {
 
 function cleanPriority(value) {
   const allowed = ["low", "normal", "high", "urgent"];
-
   const priority = String(value || "normal").toLowerCase();
 
   return allowed.includes(priority) ? priority : "normal";
+}
+
+function cleanFollowUpCompleted(value) {
+  if (value === true || value === 1 || value === "1") return 1;
+  if (value === false || value === 0 || value === "0") return 0;
+  return null;
 }
 
 export async function onRequestGet({ request, env }) {
@@ -121,7 +126,8 @@ export async function onRequestPost({ request, env }) {
         success: true,
         id,
         priority,
-        category
+        category,
+        follow_up_completed: 0
       },
       { status: 201 }
     );
@@ -140,21 +146,27 @@ export async function onRequestPatch({ request, env }) {
     const tenantId = data.tenantId || data.tenant_id;
     const allowedStatuses = ["New", "Contacted", "Booked", "Closed"];
 
-    if (
-      !data.id ||
-      !tenantId ||
-      !allowedStatuses.includes(data.status)
-    ) {
+    if (!data.id || !tenantId) {
       return Response.json(
-        {
-          error: "Valid lead ID, tenant ID and status are required"
-        },
+        { error: "Lead ID and tenant ID are required" },
         { status: 400 }
       );
     }
 
-    const updates = ["status = ?"];
-    const values = [data.status];
+    const updates = [];
+    const values = [];
+
+    if (data.status !== undefined) {
+      if (!allowedStatuses.includes(data.status)) {
+        return Response.json(
+          { error: "Invalid lead status" },
+          { status: 400 }
+        );
+      }
+
+      updates.push("status = ?");
+      values.push(data.status);
+    }
 
     if (data.priority !== undefined) {
       updates.push("priority = ?");
@@ -179,6 +191,29 @@ export async function onRequestPatch({ request, env }) {
     if (data.next_action !== undefined) {
       updates.push("next_action = ?");
       values.push(cleanText(data.next_action, 1000));
+    }
+
+    if (data.follow_up_completed !== undefined) {
+      const completed = cleanFollowUpCompleted(
+        data.follow_up_completed
+      );
+
+      if (completed === null) {
+        return Response.json(
+          { error: "Follow-up completion must be true, false, 1 or 0" },
+          { status: 400 }
+        );
+      }
+
+      updates.push("follow_up_completed = ?");
+      values.push(completed);
+    }
+
+    if (updates.length === 0) {
+      return Response.json(
+        { error: "No valid updates were provided" },
+        { status: 400 }
+      );
     }
 
     values.push(data.id, tenantId);
