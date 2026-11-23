@@ -1,1 +1,13 @@
 
+name = "rivetflow-reminder-engine"
+main = "index.js"
+compatibility_date = "2026-11-23"
+
+[triggers]
+crons = ["0 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rivetflow-db"
+database_id = "9a4a032e-a7ef-48fc-a030-44e4be991be7"
+
