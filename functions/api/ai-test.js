@@ -138,10 +138,15 @@ LEAD CAPTURE
 - Collect a service address when relevant to the business.
 - Respect the customer's decision if they do not want to submit.
 - A customer must clearly agree to submit their enquiry.
+- Before submission, ask the customer to explicitly confirm by
+  saying something like: "Yes, submit my enquiry."
+- Only treat the customer's latest message as confirmation.
+- Do not treat an earlier confirmation as permission after a
+  later refusal or change of mind.
 - Never tell a customer that an enquiry was submitted or saved.
   The platform will confirm that only after the database saves it.
 - If the customer has provided details but submission is not
-  confirmed, explain that you still need to complete the process.
+  confirmed, explain that you still need their permission.
 
 PRIVACY AND SECURITY
 
@@ -193,7 +198,11 @@ function cleanReply(content) {
 
 async function getTenant(db, tenantId) {
   return await db
-    .prepare("SELECT id, business_name FROM tenants WHERE id = ?")
+    .prepare(
+      `SELECT id, business_name, public_key
+       FROM tenants
+       WHERE id = ?`
+    )
     .bind(tenantId)
     .first();
 }
@@ -256,6 +265,7 @@ async function handleProfileAction(body, db, tenantId) {
     return jsonResponse({
       success: true,
       profile,
+      publicKey: tenant.public_key || null,
     });
   }
 
@@ -313,10 +323,13 @@ async function handleProfileAction(body, db, tenantId) {
       JSON.stringify(profile.policies)
     ).run();
 
+    const updatedTenant = await getTenant(db, tenantId);
+
     return jsonResponse({
       success: true,
       message: "Business profile saved to the cloud.",
       profile,
+      publicKey: updatedTenant?.public_key || null,
     });
   }
 
@@ -326,23 +339,32 @@ async function handleProfileAction(body, db, tenantId) {
   );
 }
 
+// Consent must be explicit in the customer's latest message.
+// Earlier messages cannot independently authorize submission.
 function hasCustomerConsent(messages) {
-  const userMessages = messages
-    .filter(message => message.role === "user")
-    .map(message => message.content.toLowerCase());
+  const latestUserMessage = [...messages]
+    .reverse()
+    .find(message => message.role === "user");
 
-  return userMessages.some(message => {
-    const negative =
-      /\b(don't|do not|dont|never|cancel|rather not|not interested)\b.{0,60}\b(submit|send|create|save|enquir|inquir|request|booking)\b/i;
+  if (!latestUserMessage) return false;
 
-    if (negative.test(message)) return false;
+  const message = latestUserMessage.content
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .trim();
 
-    const positive =
-      /\b(yes[,! ]*(please)?|i'd like to|i would like to|i want to|please go ahead|go ahead|please submit|submit my|send my|create my|proceed with|confirm)\b.{0,120}\b(submit|send|create|save|enquir|inquir|request|booking|appointment|details)\b/i;
+  const negative =
+    /\b(don't|do not|dont|never|cancel|rather not|not interested|no thanks|stop)\b/i;
 
-    return positive.test(message) ||
-      /\b(go ahead and submit|please submit my enquiry|please submit my inquiry)\b/i.test(message);
-  });
+  if (negative.test(message)) return false;
+
+  const positive =
+    /\b(yes[, ]*)?(please[, ]*)?(go ahead and )?(submit|send|save|process)\s+(my|the)\s+(enquir(?:y|ies)|inquir(?:y|ies)|request|booking|appointment|details)\b/i;
+
+  const agreement =
+    /\b(i agree to|i consent to|i confirm you can)\s+(submit|send|save|process)\s+(my|the)\s+(enquir(?:y|ies)|inquir(?:y|ies)|request|details)\b/i;
+
+  return positive.test(message) || agreement.test(message);
 }
 
 function parseAIJson(raw) {
