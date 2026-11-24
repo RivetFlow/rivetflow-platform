@@ -66,7 +66,16 @@ export default {
         return sendTestEmail(env, env.TEST_EMAIL_TO);
       }
 
-      return sendBusinessTest(env, "northstar-demo");
+      const tenantId = url.searchParams.get("tenant_id");
+
+      if (!tenantId || !tenantId.trim()) {
+        return Response.json({
+          success: false,
+          error: "A tenant_id query parameter is required."
+        }, { status: 400 });
+      }
+
+      return sendBusinessTest(env, tenantId.trim());
     }
 
     return new Response(
