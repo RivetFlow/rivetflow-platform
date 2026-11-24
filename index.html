@@ -9,6 +9,7 @@
 :root{--bg:#0b1018;--panel:#121b27;--panel2:#182433;--line:#263548;--text:#f2f5f9;--muted:#91a0b3;--blue:#4d8dff;--green:#35c98b;--red:#ff6b6b;--orange:#ffad55}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+body.auth-checking .app,body.auth-checking .modal{visibility:hidden}
 button,input,textarea,select{font:inherit}
 .app{display:flex;min-height:100vh}
 .sidebar{width:230px;background:#0e1621;border-right:1px solid var(--line);padding:25px 16px;flex-shrink:0}
@@ -98,7 +99,8 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 }
 </style>
 </head>
-<body>
+
+<body class="auth-checking">
 <div class="app">
 <aside class="sidebar">
   <div class="logo">RivetFlow <span>AI</span></div>
@@ -118,7 +120,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 <header class="topbar">
   <div>
     <h1 id="pageTitle">Overview</h1>
-    <div class="subtitle" id="workspaceSubtitle">Loading business workspace...</div>
+    <div class="subtitle" id="workspaceSubtitle">Verifying your account...</div>
   </div>
   <div class="status">● System online</div>
 </header>
@@ -179,7 +181,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
     <div class="field"><label for="goals">Business goals</label><textarea id="goals" placeholder="What should your AI assistant help your business accomplish?"></textarea></div>
     <div class="field"><label for="policies">Business policies (one per line)</label><textarea id="policies" placeholder="Policy one&#10;Policy two"></textarea></div>
     <button class="primary" id="saveProfileButton" onclick="saveBusinessProfile()">Save Business Profile</button>
-    <button class="secondary" id="resetProfileButton" onclick="restoreDefaultProfile()">Restore Demo Profile</button>
+    <button class="secondary" id="resetProfileButton" onclick="restoreDefaultProfile()">Reset Form</button>
     <div class="profile-status" id="profileStatus">Loading saved business profile...</div>
   </div>
 </section>
@@ -220,28 +222,23 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
     <div class="card"><div class="metric-label">Upcoming</div><div class="metric" id="upcomingCount">0</div></div>
     <div class="card"><div class="metric-label">Completed</div><div class="metric" id="completedCount">0</div></div>
   </div>
-
   <div class="card">
     <h2 class="section-title">Follow-Up Centre</h2>
     <p class="muted">Your follow-up tasks are organized automatically using each lead's follow-up date. Mark tasks complete when finished, or reopen them if more work is needed.</p>
     <p class="muted" id="followupStatus">Loading follow-up tasks...</p>
   </div>
-
   <div class="card followup-section">
     <h2 class="section-title">Overdue</h2>
     <div id="overdueList"><p class="empty-state">No overdue follow-ups.</p></div>
   </div>
-
   <div class="card followup-section">
     <h2 class="section-title">Due Today</h2>
     <div id="dueTodayList"><p class="empty-state">No follow-ups due today.</p></div>
   </div>
-
   <div class="card followup-section">
     <h2 class="section-title">Upcoming</h2>
     <div id="upcomingList"><p class="empty-state">No upcoming follow-ups.</p></div>
   </div>
-
   <div class="card followup-section">
     <h2 class="section-title">Completed</h2>
     <div id="completedList"><p class="empty-state">No completed follow-ups yet.</p></div>
@@ -281,10 +278,10 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
     <h2 class="section-title">Workspace Settings</h2>
     <p class="muted">Current RivetFlow workspace information.</p>
     <div class="field"><label>Workspace</label><input id="settingsBusiness" readonly></div>
-    <div class="field"><label>Tenant ID</label><input id="settingsTenant" readonly></div>
+    <div class="field"><label>Connection</label><input value="Connected to your private workspace" readonly></div>
     <div class="field"><label>Database</label><input value="Cloudflare D1" readonly></div>
     <div class="field"><label>AI Model</label><input value="@cf/zai-org/glm-4.7-flash" readonly></div>
-    <p class="muted">This is the current prototype workspace. Secure customer accounts and tenant authorization still need to be implemented before public customer onboarding.</p>
+    <p class="muted">Your business workspace is protected by your RivetFlow account.</p>
   </div>
 </section>
 </main>
@@ -296,7 +293,6 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
       <h2 id="leadModalTitle">Lead intelligence</h2>
       <button class="close-button" onclick="closeLeadDetails()">Close</button>
     </div>
-
     <div class="detail-grid">
       <div class="detail-item"><div class="detail-label">Customer name</div><div class="detail-value" id="detailName">—</div></div>
       <div class="detail-item"><div class="detail-label">Service requested</div><div class="detail-value" id="detailService">—</div></div>
@@ -307,22 +303,18 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
       <div class="detail-item"><div class="detail-label">AI priority</div><div class="detail-value" id="detailPriority">Normal</div></div>
       <div class="detail-item"><div class="detail-label">Current status</div><div class="detail-value" id="detailCurrentStatus">New</div></div>
     </div>
-
     <div class="detail-item detail-message">
       <div class="detail-label">AI enquiry summary</div>
       <div class="detail-value" id="detailSummary">No AI summary available.</div>
     </div>
-
     <div class="detail-item detail-message">
       <div class="detail-label">Recommended next action</div>
       <div class="detail-value" id="detailNextAction">No recommendation available.</div>
     </div>
-
     <div class="detail-item detail-message">
       <div class="detail-label">Customer message and service address</div>
       <div class="detail-value" id="detailMessage">No additional message provided.</div>
     </div>
-
     <div class="detail-grid" style="margin-top:15px">
       <div class="field">
         <label for="detailStatus">Lead status</label>
@@ -347,7 +339,6 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
         <input id="detailFollowUp" type="date">
       </div>
     </div>
-
     <div class="detail-actions">
       <button class="primary" id="saveLeadStatusButton" onclick="saveLeadStatus()">Save Lead Updates</button>
       <a class="secondary" id="callLeadButton" href="#" style="display:none;text-decoration:none">Call customer</a>
@@ -360,21 +351,22 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 <script>
 "use strict";
 
-const TENANT_ID = "northstar-demo";
 const API_ENDPOINT = "/api/ai-test";
+const LOGIN_PAGE = "/login.html";
 
 const DEFAULT_PROFILE = {
-  businessName:"Northstar Renovations",
-  industry:"Roofing and construction",
-  description:"Northstar Renovations provides professional roofing and renovation services.",
-  services:["Roof repairs","Roof replacement","Roof inspections","Renovations"],
-  serviceArea:"Ontario",
+  businessName:"My Business",
+  industry:"Other",
+  description:"",
+  services:[],
+  serviceArea:"",
   tone:"Friendly and professional",
   goals:"Answer customer questions, understand their needs and help them submit an enquiry.",
   policies:["Do not invent prices or estimates.","Do not promise appointment times unless confirmed."]
 };
 
 let businessProfile = {...DEFAULT_PROFILE};
+let businessPublicKey = null;
 let chatHistory = [];
 let chatBusy = false;
 let currentLead = null;
@@ -383,12 +375,54 @@ let followupBusy = false;
 
 const $ = id => document.getElementById(id);
 
+function redirectToLogin() {
+  window.location.replace(LOGIN_PAGE);
+}
+
+async function verifyLogin() {
+  try {
+    const response = await fetch("/api/auth/get-session", {
+      method:"GET",
+      credentials:"same-origin",
+      cache:"no-store",
+      headers:{"Accept":"application/json"}
+    });
+
+    if (response.status === 401 || !response.ok) {
+      redirectToLogin();
+      return false;
+    }
+
+    const sessionData = await response.json();
+
+    if (!sessionData || !sessionData.user || !sessionData.user.id) {
+      redirectToLogin();
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    document.body.classList.remove("auth-checking");
+    $("workspaceSubtitle").textContent = "Unable to verify your login. Please refresh or sign in again.";
+    $("activity").textContent = "The authentication service could not be reached.";
+    document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
+    return false;
+  }
+}
+
 async function apiRequest(payload) {
   const response = await fetch(API_ENDPOINT,{
     method:"POST",
+    credentials:"same-origin",
+    cache:"no-store",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify(payload)
   });
+
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new Error("Your login session has expired. Please sign in again.");
+  }
 
   let data;
   try {
@@ -400,6 +434,27 @@ async function apiRequest(payload) {
   if (!response.ok || data.success !== true) {
     throw new Error(data.error || data.message || "The request failed.");
   }
+
+  return data;
+}
+
+async function readLeadResponse(response) {
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new Error("Your login session has expired. Please sign in again.");
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("The server returned an unreadable response.");
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || "The request failed.");
+  }
+
   return data;
 }
 
@@ -446,7 +501,7 @@ function displayProfile(profile) {
     services:cleanArray(profile.services),
     serviceArea:profile.serviceArea || profile.service_area || "",
     tone:profile.tone || DEFAULT_PROFILE.tone,
-    goals:profile.goals || "",
+    goals:profile.goals || DEFAULT_PROFILE.goals,
     policies:cleanArray(profile.policies)
   };
 
@@ -460,7 +515,6 @@ function displayProfile(profile) {
   $("policies").value = toLines(businessProfile.policies);
   $("workspaceSubtitle").textContent = businessProfile.businessName + " workspace";
   $("settingsBusiness").value = businessProfile.businessName;
-  $("settingsTenant").value = TENANT_ID;
 }
 
 function getProfileFromForm() {
@@ -480,27 +534,22 @@ async function loadBusinessProfile() {
   $("profileStatus").textContent = "Loading profile from cloud database...";
 
   try {
-    const data = await apiRequest({action:"getProfile",tenantId:TENANT_ID});
+    const data = await apiRequest({action:"getProfile"});
     const profile = data.profile || data.businessProfile;
 
     if (!profile) throw new Error("The server did not return a business profile.");
 
-    const isUnconfigured =
-      profile.industry === "General business" &&
-      profile.description === "A business using RivetFlow AI.";
-
-    if (isUnconfigured) {
-      const saved = await apiRequest({
-        action:"saveProfile",tenantId:TENANT_ID,businessProfile:DEFAULT_PROFILE
-      });
-      displayProfile(saved.profile || DEFAULT_PROFILE);
-    } else {
-      displayProfile(profile);
+    if (typeof data.publicKey !== "string" || !/^[a-f0-9]{64}$/.test(data.publicKey)) {
+      throw new Error("Your business AI connection key was not returned. Please contact support.");
     }
 
-    $("profileStatus").textContent = "✓ Business profile loaded from cloud database.";
-    $("activity").textContent = "Business profile connected to Cloudflare D1.";
+    businessPublicKey = data.publicKey;
+    displayProfile(profile);
+
+    $("profileStatus").textContent = "✓ Business profile loaded from your private workspace.";
+    $("activity").textContent = "Your business profile is connected to Cloudflare D1.";
   } catch (error) {
+    businessPublicKey = null;
     displayProfile(DEFAULT_PROFILE);
     $("profileStatus").textContent = "Could not load cloud profile: " + error.message;
     $("activity").textContent = "Profile connection needs attention.";
@@ -521,12 +570,20 @@ async function saveBusinessProfile() {
 
   try {
     const data = await apiRequest({
-      action:"saveProfile",tenantId:TENANT_ID,businessProfile:profile
+      action:"saveProfile",
+      businessProfile:profile
     });
+
+    if (data.publicKey) {
+      if (!/^[a-f0-9]{64}$/.test(data.publicKey)) {
+        throw new Error("The server returned an invalid business AI connection key.");
+      }
+      businessPublicKey = data.publicKey;
+    }
 
     displayProfile(data.profile || profile);
     $("profileStatus").textContent = "✓ Business profile saved successfully to Cloudflare D1.";
-    $("activity").textContent = "Business profile updated and saved to cloud database.";
+    $("activity").textContent = "Business profile updated and saved to your private workspace.";
   } catch (error) {
     $("profileStatus").textContent = "Save failed: " + error.message;
   } finally {
@@ -534,7 +591,7 @@ async function saveBusinessProfile() {
   }
 }
 
-async function restoreDefaultProfile() {
+function restoreDefaultProfile() {
   $("businessName").value = DEFAULT_PROFILE.businessName;
   $("industry").value = DEFAULT_PROFILE.industry;
   $("description").value = DEFAULT_PROFILE.description;
@@ -543,7 +600,7 @@ async function restoreDefaultProfile() {
   $("tone").value = DEFAULT_PROFILE.tone;
   $("goals").value = DEFAULT_PROFILE.goals;
   $("policies").value = DEFAULT_PROFILE.policies.join("\n");
-  await saveBusinessProfile();
+  $("profileStatus").textContent = "Form reset. Press Save Business Profile when you are ready to save these changes.";
 }
 
 function addChatMessage(role,content,extraClass="") {
@@ -563,6 +620,11 @@ function resetChat() {
 async function sendChat() {
   if (chatBusy) return;
 
+  if (!businessPublicKey) {
+    addChatMessage("assistant","Your business AI connection is not ready. Please make sure your business profile has loaded successfully.","error");
+    return;
+  }
+
   const input = $("chatInput");
   const message = input.value.trim();
 
@@ -577,7 +639,11 @@ async function sendChat() {
   chatHistory.push({role:"user",content:message});
 
   try {
-    const data = await apiRequest({tenantId:TENANT_ID,messages:chatHistory});
+    const data = await apiRequest({
+      publicKey:businessPublicKey,
+      messages:chatHistory
+    });
+
     const reply = data.reply || "I couldn't generate a response.";
 
     chatHistory.push({role:"assistant",content:reply});
@@ -715,7 +781,6 @@ async function saveLeadStatus() {
 
   const updates = {
     id:currentLead.id,
-    tenantId:TENANT_ID,
     status:$("detailStatus").value,
     priority:$("detailPrioritySelect").value,
     follow_up_at:$("detailFollowUp").value || null
@@ -724,13 +789,15 @@ async function saveLeadStatus() {
   try {
     const response = await fetch("/api/leads",{
       method:"PATCH",
+      credentials:"same-origin",
+      cache:"no-store",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(updates)
     });
 
-    const data = await response.json();
+    const data = await readLeadResponse(response);
 
-    if (!response.ok || !data.success) {
+    if (!data.success) {
       throw new Error(data.error || "Could not update lead.");
     }
 
@@ -907,17 +974,18 @@ async function setFollowUpCompleted(lead,completed) {
   try {
     const response = await fetch("/api/leads",{
       method:"PATCH",
+      credentials:"same-origin",
+      cache:"no-store",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
         id:lead.id,
-        tenantId:TENANT_ID,
         follow_up_completed:completed ? 1 : 0
       })
     });
 
-    const data = await response.json();
+    const data = await readLeadResponse(response);
 
-    if (!response.ok || !data.success) {
+    if (!data.success) {
       throw new Error(data.error || "Could not update follow-up.");
     }
 
@@ -941,13 +1009,13 @@ async function setFollowUpCompleted(lead,completed) {
 
 async function loadLeads() {
   try {
-    const response = await fetch(
-      "/api/leads?tenantId=" + encodeURIComponent(TENANT_ID)
-    );
+    const response = await fetch("/api/leads",{
+      method:"GET",
+      credentials:"same-origin",
+      cache:"no-store"
+    });
 
-    if (!response.ok) throw new Error("Unable to load leads.");
-
-    const data = await response.json();
+    const data = await readLeadResponse(response);
     const leads = Array.isArray(data) ? data : (data.leads || []);
 
     cachedLeads = leads;
@@ -995,7 +1063,6 @@ async function addLead() {
   const button = $("addLeadButton");
 
   const lead = {
-    tenantId:TENANT_ID,
     customer_name:$("leadName").value.trim(),
     email:$("leadEmail").value.trim(),
     phone:$("leadPhone").value.trim(),
@@ -1014,13 +1081,15 @@ async function addLead() {
   try {
     const response = await fetch("/api/leads",{
       method:"POST",
+      credentials:"same-origin",
+      cache:"no-store",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(lead)
     });
 
-    const data = await response.json();
+    const data = await readLeadResponse(response);
 
-    if (!response.ok || data.success !== true) {
+    if (data.success !== true) {
       throw new Error(data.error || "Unable to save lead.");
     }
 
@@ -1036,6 +1105,12 @@ async function addLead() {
 }
 
 async function initializeDashboard() {
+  const authenticated = await verifyLogin();
+
+  if (!authenticated) return;
+
+  document.body.classList.remove("auth-checking");
+
   displayProfile(DEFAULT_PROFILE);
   await loadBusinessProfile();
   await loadLeads();
