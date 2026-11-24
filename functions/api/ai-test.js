@@ -1,4 +1,6 @@
 
+import { requireTenant } from "../_lib/tenant.js";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -165,6 +167,7 @@ function jsonResponse(data, status = 200) {
     headers: {
       ...CORS_HEADERS,
       "Content-Type": "application/json",
+      "Cache-Control": "no-store",
     },
   });
 }
@@ -188,16 +191,27 @@ function cleanReply(content) {
     .trim();
 }
 
-function validTenantId(value) {
-  return typeof value === "string" &&
-    /^[a-zA-Z0-9_-]{1,100}$/.test(value);
-}
-
 async function getTenant(db, tenantId) {
   return await db
     .prepare("SELECT id, business_name FROM tenants WHERE id = ?")
     .bind(tenantId)
     .first();
+}
+
+async function getPublicTenant(db, publicKey) {
+  if (
+    typeof publicKey !== "string" ||
+    !/^[a-f0-9]{64}$/.test(publicKey)
+  ) {
+    return null;
+  }
+
+  return await db.prepare(
+    `SELECT id, business_name
+     FROM tenants
+     WHERE public_key = ?
+     LIMIT 1`
+  ).bind(publicKey).first();
 }
 
 async function getSavedProfile(db, tenant) {
@@ -226,16 +240,7 @@ async function getSavedProfile(db, tenant) {
   }, tenant.business_name);
 }
 
-async function handleProfileAction(body, db) {
-  const tenantId = body.tenantId;
-
-  if (!validTenantId(tenantId)) {
-    return jsonResponse(
-      { success: false, error: "A valid tenant ID is required." },
-      400
-    );
-  }
-
+async function handleProfileAction(body, db, tenantId) {
   const tenant = await getTenant(db, tenantId);
 
   if (!tenant) {
@@ -356,7 +361,6 @@ function parseAIJson(raw) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
-// Calculate a follow-up date from the lead priority.
 function calculateFollowUpDate(priority) {
   const daysByPriority = {
     urgent: 0,
@@ -368,7 +372,6 @@ function calculateFollowUpDate(priority) {
   const days = daysByPriority[priority] ?? 3;
   const date = new Date();
 
-  // Use UTC date arithmetic for a consistent YYYY-MM-DD value.
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth();
   const day = date.getUTCDate();
@@ -378,7 +381,6 @@ function calculateFollowUpDate(priority) {
   return followUp.toISOString().slice(0, 10);
 }
 
-// Extract customer details and analyze the enquiry for the CRM.
 async function analyzeLead(env, messages, business) {
   const extractionPrompt = `
 You are analyzing a customer enquiry for a business CRM.
@@ -489,7 +491,6 @@ ${JSON.stringify(messages)}
   const lead = parseAIJson(raw);
 
   const allowedPriorities = ["low", "normal", "high", "urgent"];
-
   const proposedPriority = String(lead.priority || "normal").toLowerCase();
 
   const priority = allowedPriorities.includes(proposedPriority)
@@ -558,7 +559,6 @@ async function saveCustomerLead(db, tenantId, lead) {
   ).first();
 
   if (existing) {
-    // Fill missing intelligence on an existing duplicate lead.
     await db.prepare(`
       UPDATE leads
       SET
@@ -654,8 +654,27 @@ export async function onRequestPost({ request, env }) {
 
     const body = await request.json();
 
+    // Private business-owner profile actions require a real login.
     if (body.action === "getProfile" || body.action === "saveProfile") {
-      return await handleProfileAction(body, env.DB);
+      const access = await requireTenant(request, env);
+
+      if (!access.ok) return access.response;
+
+      return await handleProfileAction(
+        body,
+        env.DB,
+        access.tenantId
+      );
+    }
+
+    // Public homeowner chatbot: resolve the business using its public key.
+    const tenant = await getPublicTenant(env.DB, body.publicKey);
+
+    if (!tenant) {
+      return jsonResponse(
+        { success: false, error: "Business chatbot could not be found." },
+        404
+      );
     }
 
     if (!env.AI) {
@@ -665,24 +684,7 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
-    const tenantId = body.tenantId;
-
-    if (!validTenantId(tenantId)) {
-      return jsonResponse(
-        { success: false, error: "A valid tenant ID is required." },
-        400
-      );
-    }
-
-    const tenant = await getTenant(env.DB, tenantId);
-
-    if (!tenant) {
-      return jsonResponse(
-        { success: false, error: "Business account was not found." },
-        404
-      );
-    }
-
+    const tenantId = tenant.id;
     const business = await getSavedProfile(env.DB, tenant);
 
     let messages = [];
