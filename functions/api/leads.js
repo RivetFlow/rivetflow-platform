@@ -1,4 +1,6 @@
 
+import { requireTenant } from "../_lib/tenant.js";
+
 function cleanText(value, maxLength = 2000) {
   if (typeof value !== "string") return null;
 
@@ -22,27 +24,20 @@ function cleanFollowUpCompleted(value) {
 
 export async function onRequestGet({ request, env }) {
   try {
-    const url = new URL(request.url);
+    const access = await requireTenant(request, env);
 
-    const tenantId =
-      url.searchParams.get("tenantId") ||
-      url.searchParams.get("tenant_id");
-
-    if (!tenantId) {
-      return Response.json(
-        { error: "Tenant ID is required" },
-        { status: 400 }
-      );
-    }
+    if (!access.ok) return access.response;
 
     const result = await env.DB.prepare(
       `SELECT *
        FROM leads
        WHERE tenant_id = ?
        ORDER BY created_at DESC`
-    ).bind(tenantId).all();
+    ).bind(access.tenantId).all();
 
-    return Response.json(result.results || []);
+    return Response.json(result.results || [], {
+      headers: { "Cache-Control": "no-store" }
+    });
   } catch (error) {
     return Response.json(
       { error: "Could not retrieve leads" },
@@ -53,33 +48,23 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   try {
-    const data = await request.json();
+    const access = await requireTenant(request, env);
 
-    const tenantId = data.tenantId || data.tenant_id;
+    if (!access.ok) return access.response;
+
+    const data = await request.json();
 
     const customerName = cleanText(data.customer_name, 200);
     const service = cleanText(data.service, 300);
 
-    if (!customerName || !tenantId || !service) {
+    if (!customerName || !service) {
       return Response.json(
-        {
-          error: "Customer name, tenant ID and service are required"
-        },
+        { error: "Customer name and service are required" },
         { status: 400 }
       );
     }
 
-    const tenant = await env.DB.prepare(
-      "SELECT id FROM tenants WHERE id = ?"
-    ).bind(tenantId).first();
-
-    if (!tenant) {
-      return Response.json(
-        { error: "Tenant not found" },
-        { status: 404 }
-      );
-    }
-
+    const tenantId = access.tenantId;
     const id = crypto.randomUUID();
 
     const priority = cleanPriority(data.priority);
@@ -141,14 +126,16 @@ export async function onRequestPost({ request, env }) {
 
 export async function onRequestPatch({ request, env }) {
   try {
-    const data = await request.json();
+    const access = await requireTenant(request, env);
 
-    const tenantId = data.tenantId || data.tenant_id;
+    if (!access.ok) return access.response;
+
+    const data = await request.json();
     const allowedStatuses = ["New", "Contacted", "Booked", "Closed"];
 
-    if (!data.id || !tenantId) {
+    if (!data.id) {
       return Response.json(
-        { error: "Lead ID and tenant ID are required" },
+        { error: "Lead ID is required" },
         { status: 400 }
       );
     }
@@ -216,7 +203,7 @@ export async function onRequestPatch({ request, env }) {
       );
     }
 
-    values.push(data.id, tenantId);
+    values.push(data.id, access.tenantId);
 
     const result = await env.DB.prepare(
       `UPDATE leads
