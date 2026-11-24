@@ -1,8 +1,9 @@
+
 {
   "name": "rivetflow-platform",
   "private": true,
   "type": "module",
   "dependencies": {
-    "better-auth": "^1.7.27"
+    "better-auth": "1.7.28"
   }
 }
