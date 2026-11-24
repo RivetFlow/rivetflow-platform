@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Resend Verification | RivetFlow</title>
+<title>RivetFlow - Resend Verification</title>
 <style>
 body {
   margin: 0;
@@ -40,9 +40,13 @@ button {
   border: 0;
   font-weight: bold;
 }
+button:disabled {
+  opacity: 0.6;
+}
 #message {
   margin-top: 18px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 </style>
 </head>
@@ -75,36 +79,43 @@ const button = document.getElementById("submit");
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  const email = document.getElementById("email").value.trim();
+
   button.disabled = true;
   button.textContent = "Sending...";
+  message.textContent = "";
 
   try {
-    const response = await fetch(
-      "/api/auth/send-verification-email",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: document.getElementById("email").value.trim(),
-          callbackURL: "/"
-        })
-      }
-    );
+    const response = await fetch("/api/auth/send-verification-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: email,
+        callbackURL: "/"
+      })
+    });
 
-    const result = await response.json();
+    const responseText = await response.text();
+
+    let result = {};
+    try {
+      result = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      throw new Error("The server returned an unexpected response.");
+    }
 
     if (!response.ok) {
       throw new Error(
         result.message ||
-        result.error?.message ||
-        "The request failed."
+        result.error ||
+        "Request failed with status " + response.status
       );
     }
 
     message.textContent =
-      "Verification request processed. Check your inbox and spam folder.";
+      "Request processed. Check your inbox and spam folder.";
   } catch (error) {
     message.textContent = "Error: " + error.message;
   } finally {
