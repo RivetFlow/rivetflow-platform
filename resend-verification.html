@@ -2,127 +2,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RivetFlow - Resend Verification</title>
-<style>
-body {
-  margin: 0;
-  padding: 30px 20px;
-  background: #0b1018;
-  color: #f2f5f9;
-  font-family: Arial, sans-serif;
-}
-main {
-  max-width: 420px;
-  margin: 70px auto;
-  padding: 28px;
-  background: #121b27;
-  border: 1px solid #263548;
-  border-radius: 14px;
-}
-input, button {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 14px;
-  margin-top: 14px;
-  border-radius: 8px;
-  font-size: 15px;
-}
-input {
-  background: #0b1420;
-  color: white;
-  border: 1px solid #263548;
-}
-button {
-  background: #4f9cff;
-  color: white;
-  border: 0;
-  font-weight: bold;
-}
-button:disabled {
-  opacity: 0.6;
-}
-#message {
-  margin-top: 18px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RivetFlow - Email Verification</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 30px 20px;
+      background: #0b1018;
+      color: #f2f5f9;
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      max-width: 420px;
+      margin: 70px auto;
+      padding: 28px;
+      background: #121b27;
+      border: 1px solid #263548;
+      border-radius: 14px;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    p {
+      color: #b9c5d3;
+      line-height: 1.5;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 14px;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+
+    input {
+      background: #0b1420;
+      color: white;
+      border: 1px solid #263548;
+    }
+
+    button {
+      background: #4f9cff;
+      color: white;
+      border: 0;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    #message {
+      margin-top: 18px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+  </style>
 </head>
+
 <body>
-<main>
-  <h2>RivetFlow Verification</h2>
-  <p>Request a new verification email for your account.</p>
+  <main>
+    <h2>RivetFlow Verification</h2>
 
-  <form id="form">
-    <input
-      id="email"
-      type="email"
-      placeholder="Your registration email"
-      autocomplete="email"
-      required
-    >
-    <button id="submit" type="submit">
-      Resend Verification Email
-    </button>
-  </form>
+    <p>
+      Enter the email address you used to register.
+      We will request a new verification email.
+    </p>
 
-  <div id="message"></div>
-</main>
+    <form id="form">
+      <input
+        id="email"
+        type="email"
+        placeholder="Your registration email"
+        autocomplete="email"
+        required
+      >
 
-<script>
-const form = document.getElementById("form");
-const message = document.getElementById("message");
-const button = document.getElementById("submit");
+      <button id="submit" type="submit">
+        Resend Verification Email
+      </button>
+    </form>
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+    <div id="message" role="status"></div>
+  </main>
 
-  const email = document.getElementById("email").value.trim();
+  <script>
+    const form = document.getElementById("form");
+    const message = document.getElementById("message");
+    const button = document.getElementById("submit");
 
-  button.disabled = true;
-  button.textContent = "Sending...";
-  message.textContent = "";
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
 
-  try {
-    const response = await fetch("/api/auth/send-verification-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email: email,
-        callbackURL: "/"
-      })
+      const email = document
+        .getElementById("email")
+        .value
+        .trim();
+
+      button.disabled = true;
+      button.textContent = "Sending...";
+      message.textContent = "";
+
+      try {
+        const response = await fetch(
+          "/api/auth/send-verification-email",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              email: email,
+              callbackURL:
+                "https://rivetflow-platform.pages.dev/"
+            })
+          }
+        );
+
+        const responseText = await response.text();
+
+        let result = {};
+
+        try {
+          result = responseText
+            ? JSON.parse(responseText)
+            : {};
+        } catch {
+          throw new Error(
+            "The server returned an unexpected response."
+          );
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            result.message ||
+            result.error ||
+            "Server error: " + response.status
+          );
+        }
+
+        message.textContent =
+          "Request processed. Check your inbox and spam folder.";
+
+      } catch (error) {
+        message.textContent =
+          "Error: " + error.message;
+
+      } finally {
+        button.disabled = false;
+        button.textContent =
+          "Resend Verification Email";
+      }
     });
-
-    const responseText = await response.text();
-
-    let result = {};
-    try {
-      result = responseText ? JSON.parse(responseText) : {};
-    } catch {
-      throw new Error("The server returned an unexpected response.");
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        result.message ||
-        result.error ||
-        "Request failed with status " + response.status
-      );
-    }
-
-    message.textContent =
-      "Request processed. Check your inbox and spam folder.";
-  } catch (error) {
-    message.textContent = "Error: " + error.message;
-  } finally {
-    button.disabled = false;
-    button.textContent = "Resend Verification Email";
-  }
-});
-</script>
+  </script>
 </body>
 </html>
