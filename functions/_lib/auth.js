@@ -20,6 +20,13 @@ function generatePublicKey() {
 }
 
 async function sendEmail(env, to, subject, html) {
+  if (!env.RESEND_API_KEY) {
+    console.error("[RivetFlow Email] RESEND_API_KEY is missing.");
+    throw new Error("Email service is not configured.");
+  }
+
+  console.log("[RivetFlow Email] Sending email:", subject);
+
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -34,9 +41,19 @@ async function sendEmail(env, to, subject, html) {
     })
   });
 
+  const responseBody = await response.text();
+
   if (!response.ok) {
-    throw new Error("Email delivery failed.");
+    console.error(
+      "[RivetFlow Email] Resend rejected email:",
+      response.status,
+      responseBody
+    );
+
+    throw new Error("Resend email delivery failed.");
   }
+
+  console.log("[RivetFlow Email] Resend accepted email:", response.status);
 }
 
 export function createAuth(env) {
@@ -79,6 +96,8 @@ export function createAuth(env) {
                 "owner"
               )
             ]);
+
+            console.log("[RivetFlow Auth] Business membership created.");
           }
         }
       }
@@ -104,6 +123,8 @@ export function createAuth(env) {
       autoSignInAfterVerification: true,
 
       sendVerificationEmail: async ({ user, url }) => {
+        console.log("[RivetFlow Auth] Verification callback triggered.");
+
         await sendEmail(
           env,
           user.email,
