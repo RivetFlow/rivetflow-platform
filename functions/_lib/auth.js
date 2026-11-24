@@ -20,9 +20,16 @@ function generatePublicKey() {
 }
 
 async function sendEmail(env, to, subject, html) {
-  if (!env.RESEND_API_KEY) {
+  const apiKey = String(env.RESEND_API_KEY || "").trim();
+
+  if (!apiKey) {
     console.error("[RivetFlow Email] RESEND_API_KEY is missing.");
     throw new Error("Email service is not configured.");
+  }
+
+  if (/[\r\n]/.test(apiKey)) {
+    console.error("[RivetFlow Email] API key contains invalid characters.");
+    throw new Error("Email service configuration is invalid.");
   }
 
   console.log("[RivetFlow Email] Sending email:", subject);
@@ -30,7 +37,7 @@ async function sendEmail(env, to, subject, html) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
