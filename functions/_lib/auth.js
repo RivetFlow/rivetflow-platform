@@ -65,6 +65,15 @@ export function createAuth(env) {
     baseURL: appUrl,
     trustedOrigins: [appUrl],
 
+    logger: {
+      disabled: false,
+      disableColors: true,
+      level: "debug",
+      log: (level, message, ...args) => {
+        console.log(`[Better Auth ${level}] ${message}`, ...args);
+      }
+    },
+
     databaseHooks: {
       user: {
         create: {
