@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | RivetFlow</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #0b1120;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 34px;
+      letter-spacing: -1.5px;
+    }
+
+    .brand span {
+      color: #38bdf8;
+    }
+
+    .brand p {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .login-card {
+      background: #111c30;
+      border: 1px solid #26354d;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+
+    .login-card h2 {
+      margin: 0 0 8px;
+      font-size: 23px;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0b1120;
+      color: white;
+      font-size: 15px;
+      margin-bottom: 20px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #38bdf8;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #0284c7;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0369a1;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .message {
+      display: none;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .error {
+      display: none;
+      background: #451a1a;
+      color: #fecaca;
+      border: 1px solid #7f1d1d;
+    }
+
+    .success {
+      display: none;
+      background: #123524;
+      color: #bbf7d0;
+      border: 1px solid #166534;
+    }
+
+    .footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="container">
+
+    <div class="brand">
+      <h1>Rivet<span>Flow</span></h1>
+      <p>Your business. Your operations. One platform.</p>
+    </div>
+
+    <section class="login-card">
+
+      <h2>Welcome back</h2>
+      <p class="subtitle">Sign in to your Business Control Centre.</p>
+
+      <div id="error" class="message error"></div>
+      <div id="success" class="message success"></div>
+
+      <form id="loginForm">
+
+        <label for="email">Email address</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          placeholder="you@business.com"
+          autocomplete="email"
+          required
+        >
+
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          placeholder="Enter your password"
+          autocomplete="current-password"
+          required
+        >
+
+        <button type="submit" id="loginButton">
+          Sign In
+        </button>
+
+      </form>
+
+    </section>
+
+    <div class="footer">
+      © 2026 RivetFlow Technologies. All rights reserved.
+    </div>
+
+  </main>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const button = document.getElementById("loginButton");
+    const errorBox = document.getElementById("error");
+    const successBox = document.getElementById("success");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      errorBox.style.display = "none";
+      successBox.style.display = "none";
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      button.disabled = true;
+      button.textContent = "Signing in...";
+
+      try {
+        const response = await fetch("/api/auth/sign-in/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            email,
+            password,
+            callbackURL: "/"
+          })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+            data.error ||
+            "Unable to sign in. Please check your email and password."
+          );
+        }
+
+        successBox.textContent = "Login successful. Opening your dashboard...";
+        successBox.style.display = "block";
+
+        window.location.href = "/";
+
+      } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.style.display = "block";
+
+        button.disabled = false;
+        button.textContent = "Sign In";
+      }
+    });
+  </script>
+
+</body>
+</html>
