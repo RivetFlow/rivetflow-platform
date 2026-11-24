@@ -1,0 +1,332 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account | RivetFlow AI</title>
+
+<style>
+:root {
+  --bg: #0b1018;
+  --panel: #121b27;
+  --line: #263548;
+  --text: #f2f5f9;
+  --muted: #9aa9ba;
+  --accent: #4f9cff;
+  --success: #36c98f;
+  --danger: #ff7373;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  width: 100%;
+  max-width: 440px;
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.logo h1 {
+  margin: 0;
+  font-size: 29px;
+  letter-spacing: -1px;
+}
+
+.logo span {
+  color: var(--accent);
+}
+
+.logo p {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 9px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 30px;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 23px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  margin: 17px 0 8px;
+  color: #dce5ef;
+}
+
+input {
+  width: 100%;
+  padding: 14px;
+  background: #0b1420;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: white;
+  font-size: 15px;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--accent);
+}
+
+button {
+  width: 100%;
+  padding: 15px;
+  margin-top: 24px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.message {
+  display: none;
+  margin-top: 18px;
+  padding: 13px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.message.success {
+  display: block;
+  background: #103126;
+  color: var(--success);
+  border: 1px solid #236c50;
+}
+
+.message.error {
+  display: block;
+  background: #351c20;
+  color: var(--danger);
+  border: 1px solid #71343c;
+}
+
+.footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 22px;
+}
+
+.footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.terms {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin-top: 16px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="logo">
+    <h1>RivetFlow <span>AI</span></h1>
+    <p>Intelligent business operations</p>
+  </div>
+
+  <div class="panel">
+
+    <h2>Create your account</h2>
+
+    <div class="subtitle">
+      Start building a smarter, more automated business with RivetFlow.
+    </div>
+
+    <form id="registerForm">
+
+      <label for="name">Full name</label>
+      <input
+        id="name"
+        name="name"
+        type="text"
+        autocomplete="name"
+        maxlength="100"
+        placeholder="Your full name"
+        required
+      >
+
+      <label for="email">Business email</label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        autocomplete="email"
+        maxlength="254"
+        placeholder="you@yourbusiness.com"
+        required
+      >
+
+      <label for="password">Password</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="new-password"
+        minlength="8"
+        placeholder="At least 8 characters"
+        required
+      >
+
+      <label for="confirmPassword">Confirm password</label>
+      <input
+        id="confirmPassword"
+        name="confirmPassword"
+        type="password"
+        autocomplete="new-password"
+        minlength="8"
+        placeholder="Enter your password again"
+        required
+      >
+
+      <button id="submitButton" type="submit">
+        Create My Account
+      </button>
+
+    </form>
+
+    <div id="message" class="message" role="status" aria-live="polite"></div>
+
+    <div class="terms">
+      By creating an account, you agree to use RivetFlow in accordance with its terms and privacy policy.
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Already have an account?
+    <a href="/login.html">Sign in</a>
+    <br><br>
+    <a href="/">Return to RivetFlow</a>
+  </div>
+
+</div>
+
+<script>
+const form = document.getElementById("registerForm");
+const button = document.getElementById("submitButton");
+const message = document.getElementById("message");
+
+function showMessage(text, type) {
+  message.textContent = text;
+  message.className = "message " + type;
+}
+
+form.addEventListener("submit", async function(event) {
+  event.preventDefault();
+
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
+
+  message.className = "message";
+
+  if (password !== confirmPassword) {
+    showMessage("Your passwords do not match.", "error");
+    return;
+  }
+
+  if (password.length < 8) {
+    showMessage("Your password must be at least 8 characters.", "error");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Creating your account...";
+
+  try {
+    const response = await fetch("/api/auth/sign-up/email", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        password
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      throw new Error(
+        result.message ||
+        result.error?.message ||
+        "We couldn't create your account. Please check your details and try again."
+      );
+    }
+
+    form.reset();
+
+    showMessage(
+      "Your registration was submitted! Please check your email and verify your address before signing in.",
+      "success"
+    );
+
+    button.textContent = "Registration submitted";
+
+  } catch (error) {
+    showMessage(
+      error.message || "Something went wrong. Please try again.",
+      "error"
+    );
+
+    button.disabled = false;
+    button.textContent = "Create My Account";
+  }
+});
+</script>
+
+</body>
+</html>
