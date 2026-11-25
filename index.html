@@ -254,14 +254,15 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 <section class="page" id="website">
   <div class="card">
     <h2 class="section-title">Website AI Assistant</h2>
-    <p class="muted">Test how your business AI responds to customer questions.</p>
+    <p class="muted">Test how your business AI responds to customer questions. Conversation memory is enabled and saved securely in your business database.</p>
     <div class="chat-box" id="chatBox"></div>
     <div class="chat-controls">
       <input id="chatInput" placeholder="Type a customer question..." autocomplete="off">
       <button class="primary" id="sendButton" onclick="sendChat()">Send</button>
     </div>
-    <div class="muted" style="margin-top:10px">The assistant uses the business profile saved in your cloud database.</div>
-    <button class="secondary" style="margin-top:12px" onclick="resetChat()">Reset conversation</button>
+    <div class="muted" style="margin-top:10px">The assistant uses your saved business profile and previous messages associated with this browser's conversation.</div>
+    <button class="secondary" style="margin-top:12px" onclick="resetChat()">Start new conversation</button>
+    <p class="muted" id="chatMemoryStatus" style="margin-top:10px">Conversation memory is initializing...</p>
   </div>
 </section>
 
@@ -372,6 +373,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 
 const API_ENDPOINT = "/api/ai-test";
 const LOGIN_PAGE = "/login.html";
+const CONVERSATION_STORAGE_PREFIX = "rivetflow_conversation_";
 
 const DEFAULT_PROFILE = {
   businessName:"My Business",
@@ -386,7 +388,7 @@ const DEFAULT_PROFILE = {
 
 let businessProfile = {...DEFAULT_PROFILE};
 let businessPublicKey = null;
-let chatHistory = [];
+let conversationId = null;
 let chatBusy = false;
 let currentLead = null;
 let cachedLeads = [];
@@ -513,6 +515,116 @@ function cleanArray(value) {
   return [];
 }
 
+/* Persistent conversation memory */
+
+function conversationStorageKey() {
+  if (!businessPublicKey) return null;
+  return CONVERSATION_STORAGE_PREFIX + businessPublicKey;
+}
+
+function createConversationId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    const hex = Array.from(bytes,byte => byte.toString(16).padStart(2,"0")).join("");
+
+    return (
+      hex.slice(0,8) + "-" +
+      hex.slice(8,12) + "-" +
+      hex.slice(12,16) + "-" +
+      hex.slice(16,20) + "-" +
+      hex.slice(20)
+    );
+  }
+
+  throw new Error("Your browser cannot create a secure conversation ID. Please update your browser and try again.");
+}
+
+function isValidConversationId(value) {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function getOrCreateConversationId() {
+  const key = conversationStorageKey();
+
+  if (!key) {
+    throw new Error("The business AI connection is not ready.");
+  }
+
+  try {
+    const savedId = localStorage.getItem(key);
+
+    if (isValidConversationId(savedId)) {
+      conversationId = savedId;
+      return conversationId;
+    }
+
+    conversationId = createConversationId();
+    localStorage.setItem(key,conversationId);
+    return conversationId;
+  } catch (error) {
+    if (error && error.message && error.message.includes("cannot create a secure conversation ID")) {
+      throw error;
+    }
+
+    conversationId = createConversationId();
+    return conversationId;
+  }
+}
+
+function saveConversationId(value) {
+  if (!isValidConversationId(value)) {
+    throw new Error("The server returned an invalid conversation ID.");
+  }
+
+  conversationId = value;
+
+  const key = conversationStorageKey();
+
+  if (key) {
+    try {
+      localStorage.setItem(key,value);
+    } catch (error) {
+      console.warn("Conversation ID could not be saved in browser storage.",error);
+    }
+  }
+}
+
+function initializeChat() {
+  $("chatBox").innerHTML = "";
+
+  try {
+    getOrCreateConversationId();
+
+    addChatMessage(
+      "assistant",
+      "Hello! I'm the AI assistant for " + businessProfile.businessName +
+      ". How can I help you today?"
+    );
+
+    $("chatMemoryStatus").textContent =
+      "✓ Persistent memory is active. This browser will continue its saved conversation.";
+  } catch (error) {
+    conversationId = null;
+
+    addChatMessage(
+      "assistant",
+      "Your conversation memory could not be initialized. " + error.message,
+      "error"
+    );
+
+    $("chatMemoryStatus").textContent = "Conversation memory needs attention.";
+  }
+}
+
 function displayProfile(profile) {
   businessProfile = {
     businessName:profile.businessName || profile.business_name || DEFAULT_PROFILE.businessName,
@@ -568,6 +680,8 @@ async function loadBusinessProfile() {
 
     $("profileStatus").textContent = "✓ Business profile loaded from your private workspace.";
     $("activity").textContent = "Your business profile is connected to Cloudflare D1.";
+
+    initializeChat();
   } catch (error) {
     businessPublicKey = null;
     displayProfile(DEFAULT_PROFILE);
@@ -598,7 +712,13 @@ async function saveBusinessProfile() {
       if (!/^[a-f0-9]{64}$/.test(data.publicKey)) {
         throw new Error("The server returned an invalid business AI connection key.");
       }
+
+      const previousPublicKey = businessPublicKey;
       businessPublicKey = data.publicKey;
+
+      if (previousPublicKey !== businessPublicKey) {
+        initializeChat();
+      }
     }
 
     displayProfile(data.profile || profile);
@@ -632,9 +752,28 @@ function addChatMessage(role,content,extraClass="") {
 }
 
 function resetChat() {
-  chatHistory = [];
-  $("chatBox").innerHTML = "";
-  addChatMessage("assistant","Hello! I'm the AI assistant for " + businessProfile.businessName + ". How can I help you today?");
+  if (chatBusy) {
+    $("chatMemoryStatus").textContent = "Please wait for the current response before starting a new conversation.";
+    return;
+  }
+
+  try {
+    const newId = createConversationId();
+    saveConversationId(newId);
+
+    $("chatBox").innerHTML = "";
+
+    addChatMessage(
+      "assistant",
+      "Hello! I'm the AI assistant for " + businessProfile.businessName +
+      ". How can I help you today?"
+    );
+
+    $("chatMemoryStatus").textContent =
+      "✓ New conversation started. Previous conversations remain saved.";
+  } catch (error) {
+    $("chatMemoryStatus").textContent = "Could not start a new conversation: " + error.message;
+  }
 }
 
 async function sendChat() {
@@ -650,32 +789,49 @@ async function sendChat() {
 
   if (!message) return;
 
+  try {
+    if (!isValidConversationId(conversationId)) {
+      getOrCreateConversationId();
+    }
+  } catch (error) {
+    addChatMessage("assistant","Conversation memory could not be started: " + error.message,"error");
+    return;
+  }
+
   chatBusy = true;
   $("sendButton").disabled = true;
   input.disabled = true;
 
   addChatMessage("user",message);
   input.value = "";
-  chatHistory.push({role:"user",content:message});
+
+  $("chatMemoryStatus").textContent = "Saving your message and retrieving conversation history...";
 
   try {
     const data = await apiRequest({
       publicKey:businessPublicKey,
-      messages:chatHistory
+      conversationId:conversationId,
+      message:message
     });
+
+    if (data.conversationId) {
+      saveConversationId(data.conversationId);
+    }
 
     const reply = data.reply || "I couldn't generate a response.";
 
-    chatHistory.push({role:"assistant",content:reply});
     addChatMessage("assistant",reply);
+
+    $("chatMemoryStatus").textContent =
+      "✓ Conversation saved. Previous messages are available to the assistant.";
 
     if (data.leadSaved) {
       $("activity").textContent = "A new customer enquiry was saved with AI lead intelligence.";
       await loadLeads();
     }
   } catch (error) {
-    chatHistory.pop();
     addChatMessage("assistant","There was a problem connecting to the AI: " + error.message,"error");
+    $("chatMemoryStatus").textContent = "Message could not be confirmed as saved. Please try again.";
   } finally {
     chatBusy = false;
     $("sendButton").disabled = false;
@@ -685,7 +841,10 @@ async function sendChat() {
 }
 
 $("chatInput").addEventListener("keydown",event => {
-  if (event.key === "Enter") sendChat();
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendChat();
+  }
 });
 
 function runPhoneDemo() {
@@ -1321,7 +1480,6 @@ async function initializeDashboard() {
   displayProfile(DEFAULT_PROFILE);
   await loadBusinessProfile();
   await loadLeads();
-  resetChat();
 }
 
 initializeDashboard();
