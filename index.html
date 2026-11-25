@@ -94,6 +94,10 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 .ai-followup-message{background:#182433;border:1px solid #263548;border-radius:8px;padding:12px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6}
 .ai-followup-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .ai-followup-status{color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5}
+.install-code{min-height:105px;font-family:monospace;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.install-key{font-family:monospace;font-size:12px}
+.install-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.install-status{font-size:12px;color:var(--green);margin-top:12px;line-height:1.5}
 @media(max-width:700px){
 .app{display:block}
 .sidebar{width:100%;padding:15px;border-right:0;border-bottom:1px solid var(--line)}
@@ -259,6 +263,30 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 </section>
 
 <section class="page" id="website">
+  <div class="card">
+    <h2 class="section-title">Website Chatbot Installation</h2>
+    <p class="muted">Install your RivetFlow AI chatbot on your own business website. Your installation code is unique to this business workspace. Copy the code below and give it to whoever manages your website, or paste it into your website's custom HTML or code section.</p>
+
+    <div class="field">
+      <label for="widgetPublicKey">Your business public key</label>
+      <input id="widgetPublicKey" class="install-key" type="text" readonly placeholder="Loading your business public key...">
+      <div class="install-actions">
+        <button class="secondary" type="button" onclick="copyWidgetPublicKey()">Copy Public Key</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="widgetInstallCode">Website installation code</label>
+      <textarea id="widgetInstallCode" class="install-code" readonly placeholder="Your installation code will appear here once your business profile has loaded."></textarea>
+      <div class="install-actions">
+        <button class="primary" type="button" onclick="copyWidgetInstallCode()">Copy Installation Code</button>
+      </div>
+    </div>
+
+    <p class="install-status" id="widgetInstallStatus">Loading your website installation details...</p>
+    <p class="muted">The chatbot will appear on your website and send customer enquiries into this business workspace. Keep this installation code associated with the correct business website.</p>
+  </div>
+
   <div class="card">
     <h2 class="section-title">Website AI Assistant</h2>
     <p class="muted">Test how your business AI responds to customer questions. Conversation memory is enabled and saved securely in your business database.</p>
@@ -566,6 +594,81 @@ function cleanArray(value) {
   return [];
 }
 
+/* Website chatbot installation */
+
+function renderWidgetInstallCode() {
+  const keyField = $("widgetPublicKey");
+  const codeField = $("widgetInstallCode");
+  const status = $("widgetInstallStatus");
+
+  if (!keyField || !codeField || !status) return;
+
+  if (!businessPublicKey) {
+    keyField.value = "";
+    codeField.value = "";
+    status.textContent = "Your business public key has not loaded yet.";
+    return;
+  }
+
+  const code =
+    '<script src="https://rivetflow-platform.pages.dev/widget.js" data-public-key="' +
+    businessPublicKey +
+    '"><\/script>';
+
+  keyField.value = businessPublicKey;
+  codeField.value = code;
+  status.textContent = "Your website installation code is ready.";
+}
+
+async function copyWidgetText(value) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const temporary = document.createElement("textarea");
+  temporary.value = value;
+  temporary.style.position = "fixed";
+  temporary.style.opacity = "0";
+  document.body.appendChild(temporary);
+  temporary.select();
+
+  const copied = document.execCommand("copy");
+  temporary.remove();
+
+  if (!copied) {
+    throw new Error("Copy was unsuccessful.");
+  }
+}
+
+async function copyWidgetPublicKey() {
+  if (!businessPublicKey) {
+    $("widgetInstallStatus").textContent = "Your business key has not loaded yet.";
+    return;
+  }
+
+  try {
+    await copyWidgetText(businessPublicKey);
+    $("widgetInstallStatus").textContent = "Business public key copied successfully.";
+  } catch (error) {
+    $("widgetInstallStatus").textContent = "Copy failed. Please select and copy the key manually.";
+  }
+}
+
+async function copyWidgetInstallCode() {
+  if (!businessPublicKey) {
+    $("widgetInstallStatus").textContent = "Your business key has not loaded yet.";
+    return;
+  }
+
+  try {
+    await copyWidgetText($("widgetInstallCode").value);
+    $("widgetInstallStatus").textContent = "Installation code copied successfully.";
+  } catch (error) {
+    $("widgetInstallStatus").textContent = "Copy failed. Please select and copy the code manually.";
+  }
+}
+
 /* Persistent conversation memory */
 
 function conversationStorageKey() {
@@ -727,6 +830,7 @@ async function loadBusinessProfile() {
     }
 
     businessPublicKey = data.publicKey;
+    renderWidgetInstallCode();
     displayProfile(profile);
 
     $("profileStatus").textContent = "✓ Business profile loaded from your private workspace.";
@@ -735,6 +839,7 @@ async function loadBusinessProfile() {
     initializeChat();
   } catch (error) {
     businessPublicKey = null;
+    renderWidgetInstallCode();
     displayProfile(DEFAULT_PROFILE);
     $("profileStatus").textContent = "Could not load cloud profile: " + error.message;
     $("activity").textContent = "Profile connection needs attention.";
@@ -772,6 +877,7 @@ async function saveBusinessProfile() {
       }
     }
 
+    renderWidgetInstallCode();
     displayProfile(data.profile || profile);
     $("profileStatus").textContent = "✓ Business profile saved successfully to Cloudflare D1.";
     $("activity").textContent = "Business profile updated and saved to your private workspace.";
