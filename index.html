@@ -86,6 +86,12 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 .followup-date{font-size:12px;color:var(--orange)}
 .followup-completed{color:var(--green)}
 .followup-section{margin-bottom:24px}
+.ai-followup-panel{margin-top:14px;padding:15px;background:#0c1420;border:1px solid #345071;border-radius:10px}
+.ai-followup-panel h3{margin:0 0 10px;font-size:15px}
+.ai-followup-panel p{color:var(--muted);font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.ai-followup-message{background:#182433;border:1px solid #263548;border-radius:8px;padding:12px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6}
+.ai-followup-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.ai-followup-status{color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5}
 @media(max-width:700px){
 .app{display:block}
 .sidebar{width:100%;padding:15px;border-right:0;border-bottom:1px solid var(--line)}
@@ -224,7 +230,7 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
   </div>
   <div class="card">
     <h2 class="section-title">Follow-Up Centre</h2>
-    <p class="muted">Your follow-up tasks are organized automatically using each lead's follow-up date. Mark tasks complete when finished, or reopen them if more work is needed.</p>
+    <p class="muted">Your follow-up tasks are organized automatically using each lead's follow-up date. Generate personalized AI recommendations and message drafts, then review them before contacting customers.</p>
     <p class="muted" id="followupStatus">Loading follow-up tasks...</p>
   </div>
   <div class="card followup-section">
@@ -311,6 +317,19 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
       <div class="detail-label">Recommended next action</div>
       <div class="detail-value" id="detailNextAction">No recommendation available.</div>
     </div>
+
+    <div class="ai-followup-panel">
+      <h3>AI Follow-Up Assistant</h3>
+      <p id="aiFollowupReason">Generate a personalized follow-up recommendation for this customer.</p>
+      <div class="detail-label">Suggested customer message</div>
+      <div class="ai-followup-message" id="aiFollowupMessage">No AI message has been generated yet.</div>
+      <div class="ai-followup-buttons">
+        <button class="primary" id="generateModalFollowup" onclick="generateAIFollowup(currentLead,this)">Generate AI Follow-Up</button>
+        <button class="secondary" id="copyModalFollowup" onclick="copyAIFollowup(currentLead)" hidden>Copy Message</button>
+      </div>
+      <div class="ai-followup-status" id="aiFollowupStatus"></div>
+    </div>
+
     <div class="detail-item detail-message">
       <div class="detail-label">Customer message and service address</div>
       <div class="detail-value" id="detailMessage">No additional message provided.</div>
@@ -372,6 +391,7 @@ let chatBusy = false;
 let currentLead = null;
 let cachedLeads = [];
 let followupBusy = false;
+let aiFollowupBusy = false;
 
 const $ = id => document.getElementById(id);
 
@@ -752,6 +772,20 @@ function openLeadDetails(lead) {
   const followUp = lead.follow_up_at || "";
   $("detailFollowUp").value = followUp ? followUp.slice(0,10) : "";
 
+  $("aiFollowupReason").textContent = lead._aiFollowupReason ||
+    (lead.follow_up_message
+      ? "Your saved AI follow-up draft is ready. Review it before sending."
+      : "Generate a personalized follow-up recommendation for this customer.");
+
+  $("aiFollowupMessage").textContent = lead.follow_up_message ||
+    "No AI message has been generated yet.";
+
+  $("copyModalFollowup").hidden = !lead.follow_up_message;
+  $("generateModalFollowup").textContent = lead.follow_up_message
+    ? "Regenerate AI Follow-Up"
+    : "Generate AI Follow-Up";
+
+  $("aiFollowupStatus").textContent = "";
   $("leadDetailStatus").textContent = "";
   $("leadModal").hidden = false;
 }
@@ -810,6 +844,9 @@ async function saveLeadStatus() {
 
     $("leadDetailStatus").textContent = "✓ Lead updates saved successfully.";
     await loadLeads();
+
+    const refreshed = cachedLeads.find(item => item.id === updates.id);
+    if (refreshed) currentLead = refreshed;
   } catch (error) {
     $("leadDetailStatus").textContent = error.message;
   } finally {
@@ -877,6 +914,13 @@ function createFollowupCard(lead,completed = false) {
     (lead.next_action || "Review the enquiry and contact the customer.");
   card.appendChild(action);
 
+  if (lead.follow_up_message) {
+    const message = document.createElement("div");
+    message.className = "ai-followup-message";
+    message.textContent = lead.follow_up_message;
+    card.appendChild(message);
+  }
+
   const buttons = document.createElement("div");
   buttons.className = "followup-buttons";
 
@@ -885,6 +929,23 @@ function createFollowupCard(lead,completed = false) {
   viewButton.textContent = "View Lead";
   viewButton.addEventListener("click",() => openLeadDetails(lead));
   buttons.appendChild(viewButton);
+
+  const generateButton = document.createElement("button");
+  generateButton.className = "primary";
+  generateButton.textContent = lead.follow_up_message
+    ? "Regenerate AI Follow-Up"
+    : "Generate AI Follow-Up";
+  generateButton.disabled = aiFollowupBusy;
+  generateButton.addEventListener("click",() => generateAIFollowup(lead,generateButton));
+  buttons.appendChild(generateButton);
+
+  if (lead.follow_up_message) {
+    const copyButton = document.createElement("button");
+    copyButton.className = "secondary";
+    copyButton.textContent = "Copy AI Message";
+    copyButton.addEventListener("click",() => copyAIFollowup(lead));
+    buttons.appendChild(copyButton);
+  }
 
   const toggleButton = document.createElement("button");
   toggleButton.className = completed ? "secondary" : "success-button";
@@ -959,7 +1020,7 @@ function renderFollowups(leads) {
 }
 
 async function setFollowUpCompleted(lead,completed) {
-  if (followupBusy) return;
+  if (followupBusy || aiFollowupBusy) return;
 
   if (!lead || !lead.id) {
     $("followupStatus").textContent = "This lead has no record ID, so its follow-up cannot be updated.";
@@ -1101,6 +1162,152 @@ async function addLead() {
     $("leadStatus").textContent = "Could not save lead: " + error.message;
   } finally {
     button.disabled = false;
+  }
+}
+
+async function copyAIFollowup(lead) {
+  if (!lead || !lead.follow_up_message) return;
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(lead.follow_up_message);
+    } else {
+      const temporary = document.createElement("textarea");
+      temporary.value = lead.follow_up_message;
+      temporary.style.position = "fixed";
+      temporary.style.opacity = "0";
+      document.body.appendChild(temporary);
+      temporary.select();
+
+      const copied = document.execCommand("copy");
+      temporary.remove();
+
+      if (!copied) throw new Error("Copy was not successful.");
+    }
+
+    const status = $("leadModal").hidden
+      ? $("followupStatus")
+      : $("aiFollowupStatus");
+
+    status.textContent = "✓ Message copied. Review it before sending.";
+  } catch (error) {
+    const status = $("leadModal").hidden
+      ? $("followupStatus")
+      : $("aiFollowupStatus");
+
+    status.textContent = "Could not copy automatically. Please select and copy the message.";
+  }
+}
+
+async function generateAIFollowup(lead,button) {
+  if (aiFollowupBusy || followupBusy) return;
+
+  if (!lead || !lead.id) {
+    $("followupStatus").textContent = "This lead does not have a valid record ID.";
+    return;
+  }
+
+  aiFollowupBusy = true;
+
+  const originalLabel = button ? button.textContent : "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Generating...";
+  }
+
+  const modalWasOpen = !$("leadModal").hidden;
+
+  if (modalWasOpen) {
+    $("aiFollowupStatus").textContent = "AI is preparing a personalized recommendation and message...";
+  } else {
+    $("followupStatus").textContent = "Generating an AI follow-up for " +
+      (lead.customer_name || "this customer") + "...";
+  }
+
+  try {
+    const response = await fetch("/api/follow-up",{
+      method:"POST",
+      credentials:"same-origin",
+      cache:"no-store",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({leadId:lead.id})
+    });
+
+    const data = await readLeadResponse(response);
+
+    if (data.success !== true || !data.recommendation) {
+      throw new Error(data.error || "The AI did not return a recommendation.");
+    }
+
+    const recommendation = data.recommendation;
+
+    if (!recommendation.message) {
+      throw new Error("The AI did not return a customer message. Please try again.");
+    }
+
+    if (isFollowUpCompleted(lead)) {
+      const reopenResponse = await fetch("/api/leads",{
+        method:"PATCH",
+        credentials:"same-origin",
+        cache:"no-store",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          id:lead.id,
+          follow_up_completed:0
+        })
+      });
+
+      const reopenData = await readLeadResponse(reopenResponse);
+
+      if (!reopenData.success || reopenData.changes === 0) {
+        throw new Error("The recommendation was generated, but the completed follow-up could not be reopened. Please refresh and check the lead.");
+      }
+
+      lead.follow_up_completed = 0;
+    }
+
+    $("activity").textContent =
+      "AI generated a personalized follow-up for " +
+      (lead.customer_name || "a customer") + ".";
+
+    await loadLeads();
+
+    const updatedLead = cachedLeads.find(item => item.id === lead.id);
+
+    if (!updatedLead) {
+      throw new Error("The AI response was received, but the updated lead could not be reloaded. Please refresh the dashboard.");
+    }
+
+    updatedLead._aiFollowupReason = recommendation.reason || "";
+
+    if (modalWasOpen) {
+      currentLead = updatedLead;
+      openLeadDetails(updatedLead);
+      $("aiFollowupStatus").textContent = "✓ AI recommendation generated and saved. Review the draft before sending.";
+    } else {
+      $("followupStatus").textContent =
+        "✓ AI follow-up generated for " +
+        (updatedLead.customer_name || "this customer") +
+        ". The message is saved and ready for review.";
+    }
+
+    renderFollowups(cachedLeads);
+
+  } catch (error) {
+    if (modalWasOpen) {
+      $("aiFollowupStatus").textContent = "Generation failed: " + error.message;
+    } else {
+      $("followupStatus").textContent = "AI follow-up failed: " + error.message;
+    }
+  } finally {
+    aiFollowupBusy = false;
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+
+    renderFollowups(cachedLeads);
   }
 }
 
