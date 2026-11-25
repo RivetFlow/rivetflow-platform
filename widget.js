@@ -26,7 +26,6 @@
 
   let conversationId = null;
   let isSending = false;
-  let businessName = "our team";
 
   function createConversationId() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -285,10 +284,6 @@
         height: 58px;
       }
 
-      .panel.open ~ .launcher {
-        display: none;
-      }
-
       .header {
         padding-top: max(18px, env(safe-area-inset-top));
       }
@@ -306,7 +301,7 @@
   launcher.type = "button";
   launcher.setAttribute("aria-label", "Open chat");
   launcher.setAttribute("aria-expanded", "false");
-  launcher.textContent = "☏";
+  launcher.textContent = "\uD83D\uDCAC";
 
   const panel = document.createElement("section");
   panel.className = "panel";
@@ -332,7 +327,7 @@
   const closeButton = document.createElement("button");
   closeButton.className = "close";
   closeButton.type = "button";
-  closeButton.textContent = "×";
+  closeButton.textContent = "\u00D7";
   closeButton.setAttribute("aria-label", "Close chat");
 
   header.appendChild(headerInfo);
@@ -356,7 +351,7 @@
   const sendButton = document.createElement("button");
   sendButton.className = "send";
   sendButton.type = "submit";
-  sendButton.textContent = "➤";
+  sendButton.textContent = "\u27A4";
   sendButton.setAttribute("aria-label", "Send message");
 
   composer.appendChild(input);
@@ -365,6 +360,7 @@
   const footer = document.createElement("div");
   footer.className = "footer";
   footer.append("Powered by ");
+
   const footerBrand = document.createElement("span");
   footerBrand.textContent = "RivetFlow AI";
   footer.appendChild(footerBrand);
@@ -459,8 +455,7 @@
       }
 
       if (data.business) {
-        businessName = data.business;
-        nameElement.textContent = businessName;
+        nameElement.textContent = data.business;
       }
 
       if (typeof data.reply !== "string" || !data.reply.trim()) {
