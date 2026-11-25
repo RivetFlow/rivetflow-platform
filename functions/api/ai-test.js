@@ -350,7 +350,7 @@ async function handleProfileAction(body, db, tenantId) {
 function isValidConversationId(value) {
   return (
     typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
   );
 }
 
@@ -801,12 +801,13 @@ export async function onRequestPost({ request, env }) {
     let messages = [];
     let conversationId = null;
     let persistConversation = false;
+    let newCustomerMessage = null;
 
-    // New persistent conversation format.
+    // Persistent conversation format.
     if (typeof body.message === "string") {
-      const message = cleanText(body.message, 1500);
+      newCustomerMessage = cleanText(body.message, 1500);
 
-      if (!message) {
+      if (!newCustomerMessage) {
         return jsonResponse(
           { success: false, error: "A message is required." },
           400
@@ -831,26 +832,21 @@ export async function onRequestPost({ request, env }) {
         conversationId
       );
 
-      // Save the newest customer message.
-      await saveConversationMessage(
-        env.DB,
-        tenantId,
-        conversationId,
-        "user",
-        message
-      );
-
       messages.push({
         role: "user",
-        content: message,
+        content: newCustomerMessage,
       });
 
-      // Limit the AI context to recent messages.
-      messages = messages.slice(-MAX_HISTORY_MESSAGES);
+      // Validate the complete context before writing the new message.
+      if (messages.length < 1 || messages.length > MAX_HISTORY_MESSAGES) {
+        return jsonResponse(
+          { success: false, error: "Invalid conversation length." },
+          400
+        );
+      }
     } else if (Array.isArray(body.messages)) {
-      // Temporary compatibility with the existing dashboard.
-      // This older format is not persisted. The dashboard will be
-      // upgraded to the persistent format separately.
+      // Compatibility with the older dashboard format.
+      // This older format is not persisted.
       messages = body.messages;
     } else {
       return jsonResponse(
@@ -898,6 +894,20 @@ export async function onRequestPost({ request, env }) {
         400
       );
     }
+
+    // Save the new customer message only after validation succeeds.
+    if (persistConversation) {
+      await saveConversationMessage(
+        env.DB,
+        tenantId,
+        conversationId,
+        "user",
+        newCustomerMessage
+      );
+    }
+
+    // Limit AI context to the most recent messages.
+    messages = messages.slice(-MAX_HISTORY_MESSAGES);
 
     const aiMessages = [
       {
