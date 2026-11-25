@@ -8,6 +8,7 @@ const CORS_HEADERS = {
 };
 
 const MODEL = "@cf/zai-org/glm-4.7-flash";
+const MAX_HISTORY_MESSAGES = 24;
 
 const DEFAULT_BUSINESS = {
   industry: "General business",
@@ -337,6 +338,125 @@ async function handleProfileAction(body, db, tenantId) {
     { success: false, error: "Unknown profile action." },
     400
   );
+}
+
+// Validate conversation IDs before using them in database queries.
+function isValidConversationId(value) {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  );
+}
+
+// Accept the newest message only.
+// Previous conversation history always comes from our database,
+// never from a transcript supplied by the browser.
+function getLatestUserMessage(body) {
+  let content = "";
+
+  if (typeof body.message === "string") {
+    content = body.message;
+  } else if (Array.isArray(body.messages) && body.messages.length > 0) {
+    const latest = body.messages[body.messages.length - 1];
+
+    if (latest?.role !== "user") {
+      return null;
+    }
+
+    content = latest.content;
+  }
+
+  if (
+    typeof content !== "string" ||
+    !content.trim() ||
+    content.length > 1500
+  ) {
+    return null;
+  }
+
+  return content.trim();
+}
+
+async function getConversationHistory(db, tenantId, conversationId) {
+  const result = await db.prepare(`
+    SELECT role, content
+    FROM conversation_messages
+    WHERE tenant_id = ?
+      AND conversation_id = ?
+    ORDER BY created_at DESC, rowid DESC
+    LIMIT ?
+  `).bind(
+    tenantId,
+    conversationId,
+    MAX_HISTORY_MESSAGES
+  ).all();
+
+  return (result.results || [])
+    .reverse()
+    .map(message => ({
+      role: message.role,
+      content: message.content,
+    }));
+}
+
+async function saveConversationMessages(
+  db,
+  tenantId,
+  conversationId,
+  userMessage,
+  assistantReply,
+  leadId = null
+) {
+  const userId = crypto.randomUUID();
+  const assistantId = crypto.randomUUID();
+
+  await db.batch([
+    db.prepare(`
+      INSERT INTO conversation_messages (
+        id, tenant_id, conversation_id, lead_id, role, content
+      )
+      VALUES (?, ?, ?, ?, 'user', ?)
+    `).bind(
+      userId,
+      tenantId,
+      conversationId,
+      leadId,
+      userMessage
+    ),
+
+    db.prepare(`
+      INSERT INTO conversation_messages (
+        id, tenant_id, conversation_id, lead_id, role, content
+      )
+      VALUES (?, ?, ?, ?, 'assistant', ?)
+    `).bind(
+      assistantId,
+      tenantId,
+      conversationId,
+      leadId,
+      assistantReply
+    ),
+  ]);
+}
+
+async function linkConversationToLead(
+  db,
+  tenantId,
+  conversationId,
+  leadId
+) {
+  if (!leadId) return;
+
+  await db.prepare(`
+    UPDATE conversation_messages
+    SET lead_id = ?
+    WHERE tenant_id = ?
+      AND conversation_id = ?
+  `).bind(
+    leadId,
+    tenantId,
+    conversationId
+  ).run();
 }
 
 // Consent must be explicit in the customer's latest message.
@@ -709,67 +829,55 @@ export async function onRequestPost({ request, env }) {
     const tenantId = tenant.id;
     const business = await getSavedProfile(env.DB, tenant);
 
-    let messages = [];
+    const userMessage = getLatestUserMessage(body);
 
-    if (Array.isArray(body.messages)) {
-      messages = body.messages;
-    } else if (typeof body.message === "string") {
-      messages = [{ role: "user", content: body.message }];
+    if (!userMessage) {
+      return jsonResponse(
+        { success: false, error: "A valid customer message is required." },
+        400
+      );
+    }
+
+    // Create a new conversation ID when the browser starts a new chat.
+    // Returning browsers will send the ID received in the previous response.
+    let conversationId;
+
+    if (body.conversationId === undefined || body.conversationId === null || body.conversationId === "") {
+      conversationId = crypto.randomUUID();
+    } else if (isValidConversationId(body.conversationId)) {
+      conversationId = body.conversationId;
     } else {
       return jsonResponse(
-        { success: false, error: "A message is required." },
+        { success: false, error: "Invalid conversation ID." },
         400
       );
     }
 
-    if (messages.length < 1 || messages.length > 12) {
-      return jsonResponse(
-        { success: false, error: "Invalid conversation length." },
-        400
-      );
-    }
+    // Load trusted history from D1, scoped to this business.
+    const previousMessages = await getConversationHistory(
+      env.DB,
+      tenantId,
+      conversationId
+    );
 
-    let totalCharacters = 0;
+    // The browser never supplies the authoritative conversation transcript.
+    const messages = [
+      ...previousMessages,
+      {
+        role: "user",
+        content: userMessage,
+      },
+    ];
 
-    for (const message of messages) {
-      if (
-        !message ||
-        !["user", "assistant"].includes(message.role) ||
-        typeof message.content !== "string" ||
-        !message.content.trim() ||
-        message.content.length > 1500
-      ) {
-        return jsonResponse(
-          { success: false, error: "Invalid conversation message." },
-          400
-        );
-      }
-
-      totalCharacters += message.content.length;
-    }
-
-    if (totalCharacters > 8000) {
-      return jsonResponse(
-        { success: false, error: "Conversation is too long." },
-        400
-      );
-    }
-
-    if (messages[messages.length - 1].role !== "user") {
-      return jsonResponse(
-        { success: false, error: "The latest message must be from the user." },
-        400
-      );
-    }
-
+    // Limit AI context to the most recent messages.
     const aiMessages = [
       {
         role: "system",
         content: buildSystemPrompt(business),
       },
-      ...messages.map(message => ({
+      ...messages.slice(-MAX_HISTORY_MESSAGES).map(message => ({
         role: message.role,
-        content: message.content.trim(),
+        content: message.content,
       })),
     ];
 
@@ -847,9 +955,31 @@ export async function onRequestPost({ request, env }) {
       reply = preventFalseSubmissionClaim(reply);
     }
 
+    // Link the conversation to the lead when a lead was saved.
+    if (leadSaved && leadId) {
+      await linkConversationToLead(
+        env.DB,
+        tenantId,
+        conversationId,
+        leadId
+      );
+    }
+
+    // Store the customer's latest message and the final assistant reply.
+    // Messages are stored even when no lead is submitted.
+    await saveConversationMessages(
+      env.DB,
+      tenantId,
+      conversationId,
+      userMessage,
+      reply,
+      leadId
+    );
+
     return jsonResponse({
       success: true,
       reply,
+      conversationId,
       model: MODEL,
       business: business.businessName,
       leadSaved,
