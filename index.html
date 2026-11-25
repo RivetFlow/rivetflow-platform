@@ -20,6 +20,8 @@ button,input,textarea,select{font:inherit}
 .nav button.active,.nav button:hover{color:white;background:var(--panel2)}
 .main{flex:1;min-width:0;padding:28px}
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:28px}
+.topbar-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logout-button{white-space:nowrap}
 h1{font-size:25px;margin:0 0 7px}
 .subtitle{color:var(--muted);font-size:13px}
 .status{color:var(--green);font-size:12px}
@@ -99,6 +101,8 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 .nav{display:flex;overflow-x:auto;gap:5px}
 .nav button{width:auto;white-space:nowrap;margin:0}
 .main{padding:18px}
+.topbar{align-items:flex-start}
+.topbar-actions{flex-direction:column;align-items:flex-end;gap:8px}
 .chat-box{height:350px}
 .detail-grid{grid-template-columns:1fr}
 .modal-panel{padding:16px}
@@ -128,7 +132,10 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
     <h1 id="pageTitle">Overview</h1>
     <div class="subtitle" id="workspaceSubtitle">Verifying your account...</div>
   </div>
-  <div class="status">● System online</div>
+  <div class="topbar-actions">
+    <div class="status">● System online</div>
+    <button class="secondary logout-button" id="logoutButton" type="button" onclick="logout()">Log Out</button>
+  </div>
 </header>
 
 <section class="page active" id="overview">
@@ -399,6 +406,50 @@ const $ = id => document.getElementById(id);
 
 function redirectToLogin() {
   window.location.replace(LOGIN_PAGE);
+}
+
+/* Secure account logout */
+
+async function logout() {
+  const button = $("logoutButton");
+
+  if (!button || button.disabled) return;
+
+  button.disabled = true;
+  button.textContent = "Logging out...";
+
+  try {
+    const response = await fetch("/api/auth/sign-out", {
+      method:"POST",
+      credentials:"same-origin",
+      cache:"no-store",
+      headers:{
+        "Content-Type":"application/json",
+        "Accept":"application/json"
+      },
+      body:JSON.stringify({})
+    });
+
+    if (!response.ok) {
+      let message = "Could not log out. Please try again.";
+
+      try {
+        const data = await response.json();
+        if (data && (data.message || data.error)) {
+          message = data.message || data.error;
+        }
+      } catch {}
+
+      throw new Error(message);
+    }
+
+    window.location.replace(LOGIN_PAGE);
+
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Log Out";
+    alert("Logout failed: " + error.message);
+  }
 }
 
 async function verifyLogin() {
