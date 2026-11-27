@@ -1,6 +1,15 @@
 
 import { requireTenant } from "../_lib/tenant.js";
 
+function jsonResponse(data, status = 200) {
+  return Response.json(data, {
+    status,
+    headers: {
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
 function cleanText(value, maxLength = 2000) {
   if (typeof value !== "string") return null;
 
@@ -19,7 +28,26 @@ function cleanPriority(value) {
 function cleanFollowUpCompleted(value) {
   if (value === true || value === 1 || value === "1") return 1;
   if (value === false || value === 0 || value === "0") return 0;
+
   return null;
+}
+
+async function readRequestBody(request) {
+  try {
+    const data = await request.json();
+
+    if (
+      !data ||
+      typeof data !== "object" ||
+      Array.isArray(data)
+    ) {
+      return null;
+    }
+
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 export async function onRequestGet({ request, env }) {
@@ -35,13 +63,11 @@ export async function onRequestGet({ request, env }) {
        ORDER BY created_at DESC`
     ).bind(access.tenantId).all();
 
-    return Response.json(result.results || [], {
-      headers: { "Cache-Control": "no-store" }
-    });
+    return jsonResponse(result.results || []);
   } catch (error) {
-    return Response.json(
+    return jsonResponse(
       { error: "Could not retrieve leads" },
-      { status: 500 }
+      500
     );
   }
 }
@@ -52,15 +78,22 @@ export async function onRequestPost({ request, env }) {
 
     if (!access.ok) return access.response;
 
-    const data = await request.json();
+    const data = await readRequestBody(request);
+
+    if (!data) {
+      return jsonResponse(
+        { error: "A valid JSON object is required" },
+        400
+      );
+    }
 
     const customerName = cleanText(data.customer_name, 200);
     const service = cleanText(data.service, 300);
 
     if (!customerName || !service) {
-      return Response.json(
+      return jsonResponse(
         { error: "Customer name and service are required" },
-        { status: 400 }
+        400
       );
     }
 
@@ -106,7 +139,7 @@ export async function onRequestPost({ request, env }) {
       nextAction
     ).run();
 
-    return Response.json(
+    return jsonResponse(
       {
         success: true,
         id,
@@ -114,12 +147,12 @@ export async function onRequestPost({ request, env }) {
         category,
         follow_up_completed: 0
       },
-      { status: 201 }
+      201
     );
   } catch (error) {
-    return Response.json(
+    return jsonResponse(
       { error: "Could not save lead" },
-      { status: 500 }
+      500
     );
   }
 }
@@ -130,24 +163,42 @@ export async function onRequestPatch({ request, env }) {
 
     if (!access.ok) return access.response;
 
-    const data = await request.json();
-    const allowedStatuses = ["New", "Contacted", "Booked", "Closed"];
+    const data = await readRequestBody(request);
 
-    if (!data.id) {
-      return Response.json(
-        { error: "Lead ID is required" },
-        { status: 400 }
+    if (!data) {
+      return jsonResponse(
+        { error: "A valid JSON object is required" },
+        400
       );
     }
+
+    const id = cleanText(data.id, 100);
+
+    if (!id) {
+      return jsonResponse(
+        { error: "Lead ID is required" },
+        400
+      );
+    }
+
+    const allowedStatuses = [
+      "New",
+      "Contacted",
+      "Booked",
+      "Closed"
+    ];
 
     const updates = [];
     const values = [];
 
     if (data.status !== undefined) {
-      if (!allowedStatuses.includes(data.status)) {
-        return Response.json(
+      if (
+        typeof data.status !== "string" ||
+        !allowedStatuses.includes(data.status)
+      ) {
+        return jsonResponse(
           { error: "Invalid lead status" },
-          { status: 400 }
+          400
         );
       }
 
@@ -186,9 +237,11 @@ export async function onRequestPatch({ request, env }) {
       );
 
       if (completed === null) {
-        return Response.json(
-          { error: "Follow-up completion must be true, false, 1 or 0" },
-          { status: 400 }
+        return jsonResponse(
+          {
+            error: "Follow-up completion must be true, false, 1 or 0"
+          },
+          400
         );
       }
 
@@ -197,13 +250,13 @@ export async function onRequestPatch({ request, env }) {
     }
 
     if (updates.length === 0) {
-      return Response.json(
+      return jsonResponse(
         { error: "No valid updates were provided" },
-        { status: 400 }
+        400
       );
     }
 
-    values.push(data.id, access.tenantId);
+    values.push(id, access.tenantId);
 
     const result = await env.DB.prepare(
       `UPDATE leads
@@ -211,14 +264,14 @@ export async function onRequestPatch({ request, env }) {
        WHERE id = ? AND tenant_id = ?`
     ).bind(...values).run();
 
-    return Response.json({
+    return jsonResponse({
       success: true,
       changes: result.meta.changes
     });
   } catch (error) {
-    return Response.json(
+    return jsonResponse(
       { error: "Could not update lead" },
-      { status: 500 }
+      500
     );
   }
 }
