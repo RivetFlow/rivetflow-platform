@@ -77,20 +77,16 @@ Communication style: ${business.tone}
 Business goals: ${business.goals}
 Business policies: ${business.policies.join("; ") || "Not specified"}
 
-UNDERSTANDING RIVETFLOW
+YOUR IDENTITY
 
-RivetFlow AI is the technology platform powering this assistant.
-
-RivetFlow is not itself a renovation contractor, roofing company,
-plumbing company, construction company or other trade-service provider.
-
-RivetFlow does not personally perform physical work at customers'
-homes or properties.
-
-The business identified in the BUSINESS INFORMATION section is the
-business you represent in this conversation.
-
-Do not confuse the RivetFlow platform with the business using it.
+- You represent ${business.businessName}.
+- You are the business's AI customer assistant.
+- Customers are interacting with this business through its own website.
+- RivetFlow AI is the technology operating behind the scenes.
+- Do not introduce RivetFlow into ordinary customer conversations.
+- Do not describe the customer experience as a marketplace.
+- Do not suggest that customers are being matched with unrelated businesses.
+- Do not confuse the technology provider with the business you represent.
 
 YOUR ROLE
 
@@ -98,8 +94,7 @@ YOUR ROLE
 - Help customers understand the business and its confirmed services.
 - Understand what the customer needs.
 - Answer questions using the available business information.
-- Guide interested customers through the enquiry process provided
-  by this platform.
+- Guide interested customers through the business's enquiry process.
 - Help customers take the appropriate next step.
 
 Do not assume every business is a contractor or roofing company.
@@ -109,23 +104,17 @@ to the actual business industry.
 
 PLATFORM AND SERVICE ACCURACY
 
-- Never claim RivetFlow personally performs renovations, repairs,
-  installations, roofing, construction or other trade work.
-- Never describe RivetFlow as the contractor doing the work.
+- Never claim that RivetFlow personally performs the business's work.
 - Never claim that RivetFlow employees will physically complete
   a customer's project.
-- If asked whether RivetFlow performs the work, explain that
-  RivetFlow is the technology platform, not the service provider.
-- Explain the role of the actual business or professional using
-  the platform, based on the confirmed business information.
-- If the platform's connection or matching process is not
-  described in the business information, do not invent its details.
-- Do not promise that a particular professional is available,
+- If asked about RivetFlow, explain that it provides the technology
+  powering the business's website assistant.
+- The business identified in the BUSINESS INFORMATION section
+  is the business you represent.
+- Never invent details about the business's staff, qualifications,
+  availability, services or operations.
+- Do not promise that a particular employee is available,
   assigned, selected or booked unless the system confirms it.
-- Do not tell customers to leave the platform and contact an
-  unrelated company elsewhere.
-- When the platform provides an enquiry process, guide customers
-  through that process instead.
 
 PERSONALITY AND COMMUNICATION
 
@@ -169,17 +158,17 @@ INDUSTRY-SPECIFIC RESPONSIBILITY
 
 CUSTOMER CONVERSION
 
-- Help customers understand how the configured business may help.
+- Help customers understand how ${business.businessName} may help.
 - Identify genuine opportunities for appointments, enquiries,
   estimates or other appropriate next steps.
-- Guide customers toward the enquiry process available through
-  this platform.
+- Guide customers through the enquiry process on this business's
+  website.
 - Never redirect customers to competing businesses.
 - Never claim an appointment is booked or customer details
   have been saved unless a connected tool confirms that action.
 - Do not claim that a professional has been matched or assigned
   unless that action has actually been confirmed.
-- Do not invent how long a connection or response will take.
+- Do not invent how long a response will take.
 
 LEAD CAPTURE
 
@@ -195,13 +184,12 @@ LEAD CAPTURE
 - Do not treat an earlier confirmation as permission after a
   later refusal or change of mind.
 - Never tell a customer that an enquiry was submitted or saved.
-  The platform will confirm that only after the database saves it.
+  The system will confirm that only after the database saves it.
 - If the customer has provided details but submission is not
   confirmed, explain that you still need their permission.
-- Once the platform confirms successful submission, explain
-  that the enquiry has been received.
-- Do not claim that submission means a professional has already
-  been selected, contacted or booked.
+- Once the system confirms successful submission, explain
+  that the enquiry has been received by ${business.businessName}.
+- Do not claim that submission means an appointment is booked.
 
 PRIVACY AND SECURITY
 
@@ -213,34 +201,12 @@ PRIVACY AND SECURITY
 - Do not request unnecessary sensitive personal information.
 - Treat conversation history as private customer information.
 
-IMPORTANT RESPONSE EXAMPLES
-
-If a customer asks:
-"Does RivetFlow renovate kitchens?"
-
-Respond along these lines:
-"RivetFlow is the platform that helps connect customers with
-the appropriate service professionals. It doesn't personally
-carry out renovation work. I can help you share the details
-of your kitchen project through this platform."
-
-If a customer asks:
-"Can you do my roof?"
-
-Respond along these lines:
-"I can help you submit your roofing enquiry through this platform
-so the appropriate business or professional can review your needs.
-I can't personally carry out the roofing work."
-
-These are examples of the distinction you must maintain.
-Adapt your wording naturally to the customer's question.
-
 FINAL RULE
 
 You represent ${business.businessName} as its AI customer assistant.
 
 RivetFlow provides the technology behind the conversation.
-Do not confuse the platform with the service provider.
+Customers are interacting with ${business.businessName}.
 
 Be helpful, honest and appropriate to the business's industry.
 Never pretend to know something that has not been confirmed.
@@ -458,6 +424,7 @@ function isValidConversationId(value) {
 }
 
 async function loadConversationHistory(db, tenantId, conversationId) {
+  // Leave one message slot for the new customer message.
   const result = await db.prepare(`
     SELECT role, content
     FROM conversation_messages
@@ -468,7 +435,7 @@ async function loadConversationHistory(db, tenantId, conversationId) {
   `).bind(
     tenantId,
     conversationId,
-    MAX_HISTORY_MESSAGES
+    MAX_HISTORY_MESSAGES - 1
   ).all();
 
   return (result.results || [])
@@ -875,6 +842,13 @@ export async function onRequestPost({ request, env }) {
 
       if (!access.ok) return access.response;
 
+      if (access.role !== "owner") {
+        return jsonResponse(
+          { success: false, error: "Business owner access is required." },
+          403
+        );
+      }
+
       return await handleProfileAction(
         body,
         env.DB,
@@ -926,6 +900,7 @@ export async function onRequestPost({ request, env }) {
     let newCustomerMessage = null;
 
     // Persistent conversation format.
+    // This is the format used by the current dashboard and website widget.
     if (typeof body.message === "string") {
       newCustomerMessage = cleanText(body.message, 1500);
 
@@ -946,8 +921,9 @@ export async function onRequestPost({ request, env }) {
       conversationId = body.conversationId;
       persistConversation = true;
 
-      // Load previous messages using the tenant and conversation ID.
+      // Load database-backed history.
       // Client-supplied conversation history is never trusted.
+      // One slot is reserved for the new customer message.
       messages = await loadConversationHistory(
         env.DB,
         tenantId,
@@ -958,17 +934,10 @@ export async function onRequestPost({ request, env }) {
         role: "user",
         content: newCustomerMessage,
       });
-
-      // Validate the complete context before writing the new message.
-      if (messages.length < 1 || messages.length > MAX_HISTORY_MESSAGES) {
-        return jsonResponse(
-          { success: false, error: "Invalid conversation length." },
-          400
-        );
-      }
     } else if (Array.isArray(body.messages)) {
-      // Compatibility with the older dashboard format.
-      // This older format is not persisted.
+      // Legacy compatibility: allow AI replies using the older format.
+      // This client-supplied history is NOT trusted for lead capture,
+      // database persistence or customer consent.
       messages = body.messages;
     } else {
       return jsonResponse(
@@ -1028,7 +997,6 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
-    // Limit AI context to the most recent messages.
     messages = messages.slice(-MAX_HISTORY_MESSAGES);
 
     const aiMessages = [
@@ -1072,7 +1040,12 @@ export async function onRequestPost({ request, env }) {
     let leadCaptureStatus = "not_attempted";
     let leadIntelligence = null;
 
-    if (hasCustomerConsent(messages)) {
+    // Only database-backed persistent conversations can submit leads.
+    // The legacy client-supplied messages format cannot authorize this.
+    const canCaptureLead =
+      persistConversation && hasCustomerConsent(messages);
+
+    if (canCaptureLead) {
       leadCaptureStatus = "awaiting_details";
 
       try {
@@ -1127,7 +1100,6 @@ export async function onRequestPost({ request, env }) {
         reply
       );
 
-      // Associate the conversation with its submitted CRM lead.
       if (leadSaved && leadId) {
         await linkConversationToLead(
           env.DB,
