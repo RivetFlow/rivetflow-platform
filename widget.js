@@ -26,6 +26,7 @@
 
   let conversationId = null;
   let isSending = false;
+  let subscriptionUnavailable = false;
 
   function createConversationId() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -395,7 +396,10 @@
     panel.classList.add("open");
     launcher.setAttribute("aria-expanded", "true");
     launcher.style.display = "none";
-    input.focus();
+
+    if (!subscriptionUnavailable) {
+      input.focus();
+    }
   }
 
   function closeChat() {
@@ -413,7 +417,7 @@
   );
 
   async function sendMessage(message) {
-    if (isSending) return;
+    if (isSending || subscriptionUnavailable) return;
 
     isSending = true;
     input.disabled = true;
@@ -448,6 +452,27 @@
         throw new Error("The server returned an invalid response.");
       }
 
+      // Handle businesses without an active subscription.
+      if (
+        response.status === 403 &&
+        data.code === "SUBSCRIPTION_REQUIRED"
+      ) {
+        typing.remove();
+
+        subscriptionUnavailable = true;
+
+        addMessage(
+          "This chatbot is temporarily unavailable. Please contact the business directly.",
+          "assistant"
+        );
+
+        input.disabled = true;
+        sendButton.disabled = true;
+        input.placeholder = "Chat temporarily unavailable";
+
+        return;
+      }
+
       if (!response.ok || !data.success) {
         throw new Error(
           data.error || "The chat service is temporarily unavailable."
@@ -477,9 +502,12 @@
 
     } finally {
       isSending = false;
-      input.disabled = false;
-      sendButton.disabled = false;
-      input.focus();
+
+      if (!subscriptionUnavailable) {
+        input.disabled = false;
+        sendButton.disabled = false;
+        input.focus();
+      }
     }
   }
 
@@ -488,7 +516,7 @@
 
     const message = input.value.trim();
 
-    if (!message || isSending) return;
+    if (!message || isSending || subscriptionUnavailable) return;
 
     input.value = "";
     sendMessage(message);
