@@ -48,13 +48,10 @@ async function sendEmail(env, to, subject, html) {
     })
   });
 
-  const responseBody = await response.text();
-
   if (!response.ok) {
     console.error(
       "[RivetFlow Email] Resend rejected email:",
-      response.status,
-      responseBody
+      response.status
     );
 
     throw new Error("Resend email delivery failed.");
@@ -64,7 +61,17 @@ async function sendEmail(env, to, subject, html) {
 }
 
 export function createAuth(env) {
-  const appUrl = env.BETTER_AUTH_URL || DEFAULT_APP_URL;
+  const appUrl = String(
+    env.BETTER_AUTH_URL || DEFAULT_APP_URL
+  ).trim();
+
+  if (!env.BETTER_AUTH_SECRET) {
+    throw new Error("BETTER_AUTH_SECRET is not configured.");
+  }
+
+  if (!env.DB) {
+    throw new Error("Database binding is not configured.");
+  }
 
   return betterAuth({
     database: env.DB,
@@ -75,9 +82,9 @@ export function createAuth(env) {
     logger: {
       disabled: false,
       disableColors: true,
-      level: "debug",
-      log: (level, message, ...args) => {
-        console.log(`[Better Auth ${level}] ${message}`, ...args);
+      level: "error",
+      log: (level, message) => {
+        console.error(`[Better Auth ${level}] ${message}`);
       }
     },
 
