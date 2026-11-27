@@ -23,9 +23,8 @@ async function checkSubscription(db, tenantId) {
   const now = Date.now();
 
   if (subscription.status === "active") {
-    if (!subscription.current_period_end) return false;
+    const end = Date.parse(subscription.current_period_end || "");
 
-    const end = Date.parse(subscription.current_period_end);
     return Number.isFinite(end) && end > now;
   }
 
@@ -42,8 +41,8 @@ async function checkSubscription(db, tenantId) {
 
 function cleanDnsValue(value) {
   return String(value || "")
-    .replace(/^"|"$/g, "")
-    .replace(/"\s+"/g, "");
+    .replace(/"\s+"/g, "")
+    .replace(/^"|"$/g, "");
 }
 
 async function verifyDnsRecord(domain, token) {
@@ -72,6 +71,14 @@ async function verifyDnsRecord(domain, token) {
   return result.Answer.some(record => {
     if (record.type !== 16) return false;
 
+    const recordName = String(record.name || "")
+      .toLowerCase()
+      .replace(/\.$/, "");
+
+    if (recordName !== hostname.toLowerCase()) {
+      return false;
+    }
+
     return cleanDnsValue(record.data) === token;
   });
 }
@@ -88,6 +95,13 @@ export async function onRequestPost({ request, env }) {
     const access = await requireTenant(request, env);
 
     if (!access.ok) return access.response;
+
+    if (access.role !== "owner") {
+      return jsonResponse({
+        success: false,
+        error: "Only the business owner can verify website connections.",
+      }, 403);
+    }
 
     const hasSubscription = await checkSubscription(
       env.DB,
@@ -107,6 +121,13 @@ export async function onRequestPost({ request, env }) {
     try {
       body = await request.json();
     } catch {
+      return jsonResponse({
+        success: false,
+        error: "Invalid request data.",
+      }, 400);
+    }
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
       return jsonResponse({
         success: false,
         error: "Invalid request data.",
@@ -193,19 +214,26 @@ export async function onRequestPost({ request, env }) {
       });
     }
 
-    const now = new Date().toISOString();
+    // A unique marker prevents a second simultaneous attempt
+    // from treating another request's token update as its own.
+    const verificationStamp =
+      `${new Date().toISOString()}-${crypto.randomUUID()}`;
 
-    await env.DB.batch([
+    const results = await env.DB.batch([
       env.DB.prepare(`
         UPDATE website_verification_tokens
         SET verified_at = ?
         WHERE id = ?
           AND tenant_id = ?
+          AND website_connection_id = ?
           AND verified_at IS NULL
+          AND expires_at > ?
       `).bind(
-        now,
+        verificationStamp,
         verification.id,
-        access.tenantId
+        access.tenantId,
+        websiteId,
+        new Date().toISOString()
       ),
 
       env.DB.prepare(`
@@ -215,12 +243,36 @@ export async function onRequestPost({ request, env }) {
           updated_at = ?
         WHERE id = ?
           AND tenant_id = ?
+          AND verification_status != 'verified'
+          AND EXISTS (
+            SELECT 1
+            FROM website_verification_tokens
+            WHERE id = ?
+              AND tenant_id = ?
+              AND website_connection_id = ?
+              AND verified_at = ?
+          )
       `).bind(
-        now,
+        new Date().toISOString(),
         websiteId,
-        access.tenantId
+        access.tenantId,
+        verification.id,
+        access.tenantId,
+        websiteId,
+        verificationStamp
       ),
     ]);
+
+    const tokenChanges = results?.[0]?.meta?.changes || 0;
+    const websiteChanges = results?.[1]?.meta?.changes || 0;
+
+    if (tokenChanges !== 1 || websiteChanges !== 1) {
+      return jsonResponse({
+        success: false,
+        error: "Verification could not be completed. Please try again.",
+        code: "VERIFICATION_UPDATE_FAILED",
+      }, 409);
+    }
 
     return jsonResponse({
       success: true,
