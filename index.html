@@ -98,6 +98,34 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 .install-key{font-family:monospace;font-size:12px}
 .install-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 .install-status{font-size:12px;color:var(--green);margin-top:12px;line-height:1.5}
+
+/* Website Connection Centre */
+.connection-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.connection-lock{background:#302817;border:1px solid #66502a;border-radius:10px;padding:16px;margin-top:15px}
+.connection-lock h3{margin:0 0 8px;color:#ffc078;font-size:15px}
+.connection-lock p{margin:0;color:#d2c2a8;font-size:13px;line-height:1.6}
+.connection-status{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px}
+.connection-list{margin-top:18px}
+.website-card{background:#0c1420;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+.website-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.website-domain{font-size:15px;font-weight:700;overflow-wrap:anywhere}
+.website-meta{font-size:12px;color:var(--muted);line-height:1.7;margin-top:7px}
+.connection-badge{display:inline-block;padding:5px 9px;border-radius:20px;font-size:11px;background:#263548;color:#d5dfed}
+.connection-badge.verified{background:#173d32;color:#8ce2bd}
+.connection-badge.pending{background:#3b301c;color:#ffc078}
+.connection-badge.failed{background:#54262c;color:#ff9696}
+.website-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.dns-panel{background:#182433;border:1px solid #345071;border-radius:10px;padding:16px;margin-top:14px}
+.dns-panel h3{font-size:15px;margin:0 0 8px}
+.dns-value{font-family:monospace;font-size:12px;overflow-wrap:anywhere;background:#0c1420;border:1px solid var(--line);padding:11px;border-radius:7px;margin:7px 0 12px;user-select:text}
+.dns-instructions{font-size:13px;color:var(--muted);line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.connection-feedback{font-size:13px;line-height:1.6;margin-top:12px;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.connection-feedback.error{color:#ff9696}
+.connection-feedback.success{color:#8ce2bd}
+.connection-empty{padding:16px;border:1px dashed var(--line);border-radius:9px;color:var(--muted);font-size:13px;line-height:1.6}
+.connection-form{display:flex;gap:10px;align-items:flex-end}
+.connection-form .field{flex:1;min-width:0;margin:0}
+.installation-note{font-size:12px;color:var(--orange);line-height:1.6;margin-top:10px}
 @media(max-width:700px){
 .app{display:block}
 .sidebar{width:100%;padding:15px;border-right:0;border-bottom:1px solid var(--line)}
@@ -110,6 +138,8 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 .chat-box{height:350px}
 .detail-grid{grid-template-columns:1fr}
 .modal-panel{padding:16px}
+.connection-form{display:block}
+.connection-form .field{margin-bottom:10px}
 }
 </style>
 </head>
@@ -263,6 +293,76 @@ a.contact-link{color:#9fc2ff;text-decoration:underline}
 </section>
 
 <section class="page" id="website">
+
+  <!-- NEW: WEBSITE CONNECTION CENTRE -->
+  <div class="card">
+    <div class="connection-header">
+      <div>
+        <h2 class="section-title">Website Connection Centre</h2>
+        <p class="muted">Connect the website or websites where you want your business AI assistant to operate. RivetFlow checks ownership through a DNS verification record.</p>
+      </div>
+      <button class="secondary" id="refreshWebsitesButton" type="button" onclick="loadWebsiteConnections()">Refresh Connections</button>
+    </div>
+
+    <div id="websiteSubscriptionLock" class="connection-lock" hidden>
+      <h3>Website connections are locked</h3>
+      <p>An active paid RivetFlow package is required before you can add, manage or verify websites. Choose a package and activate your subscription to unlock this section. Your existing account and business profile remain available.</p>
+    </div>
+
+    <div id="websiteConnectionContent">
+      <div class="connection-form">
+        <div class="field">
+          <label for="websiteUrlInput">Your business website address</label>
+          <input id="websiteUrlInput" type="url" placeholder="https://www.yourbusiness.com" autocomplete="url">
+        </div>
+        <button class="primary" id="addWebsiteButton" type="button" onclick="addWebsiteConnection()">Connect Website</button>
+      </div>
+      <p class="muted">Enter the full website address, including https://. You can connect more than one website to the same business workspace.</p>
+    </div>
+
+    <p id="websiteConnectionStatus" class="connection-feedback">Checking website connection access...</p>
+
+    <div class="connection-list">
+      <h3 class="section-title">Connected Websites</h3>
+      <div id="websiteConnectionsList">
+        <div class="connection-empty">Your website connections will appear here.</div>
+      </div>
+    </div>
+
+    <div id="websiteVerificationDetails" class="dns-panel" hidden>
+      <h3>DNS Ownership Verification</h3>
+      <p class="muted">Add the following TXT record in your domain provider's DNS settings. DNS changes can take time to become visible.</p>
+
+      <div class="field">
+        <label>Record type</label>
+        <div class="dns-value" id="dnsRecordType">TXT</div>
+      </div>
+
+      <div class="field">
+        <label>Host / Name</label>
+        <div class="dns-value" id="dnsRecordHost"></div>
+        <button class="secondary" type="button" onclick="copyDnsField('dnsRecordHost')">Copy Host</button>
+      </div>
+
+      <div class="field">
+        <label>TXT value</label>
+        <div class="dns-value" id="dnsRecordValue"></div>
+        <button class="secondary" type="button" onclick="copyDnsField('dnsRecordValue')">Copy TXT Value</button>
+      </div>
+
+      <div class="field">
+        <label>Verification token expiry</label>
+        <div class="dns-value" id="dnsRecordExpiry">Not available</div>
+      </div>
+
+      <div class="dns-instructions" id="dnsInstructions"></div>
+      <p class="muted">Once the DNS record has been added, return here and select Verify Website. The verification token expires after 24 hours. If it expires, a new verification request may be needed.</p>
+      <button class="secondary" type="button" onclick="hideDnsDetails()">Close Instructions</button>
+    </div>
+
+    <p class="installation-note">Important: DNS verification confirms that you control the domain. It does not confirm that the chatbot installation code is installed or working on your website. Chatbot installation is a separate step.</p>
+  </div>
+
   <div class="card">
     <h2 class="section-title">Website Chatbot Installation</h2>
     <p class="muted">Install your RivetFlow AI chatbot on your own business website. Your installation code is unique to this business workspace. Copy the code below and give it to whoever manages your website, or paste it into your website's custom HTML or code section.</p>
@@ -430,6 +530,12 @@ let cachedLeads = [];
 let followupBusy = false;
 let aiFollowupBusy = false;
 
+/* Website connection state */
+let websiteConnections = [];
+let websiteConnectionsLocked = false;
+let websiteConnectionsBusy = false;
+let latestVerificationDetails = null;
+
 const $ = id => document.getElementById(id);
 
 function redirectToLogin() {
@@ -577,6 +683,7 @@ function showPage(page) {
   $("pageTitle").textContent = titles[page] || "Overview";
 
   if (page === "leads" || page === "followups") loadLeads();
+  if (page === "website") loadWebsiteConnections();
 }
 
 document.querySelectorAll(".nav button").forEach(button => {
@@ -666,6 +773,379 @@ async function copyWidgetInstallCode() {
     $("widgetInstallStatus").textContent = "Installation code copied successfully.";
   } catch (error) {
     $("widgetInstallStatus").textContent = "Copy failed. Please select and copy the code manually.";
+  }
+}
+
+/* Website Connection Centre API */
+
+async function websiteApiRequest(url,options = {}) {
+  const response = await fetch(url,{
+    ...options,
+    credentials:"same-origin",
+    cache:"no-store",
+    headers:{
+      "Accept":"application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new Error("Your login session has expired. Please sign in again.");
+  }
+
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("The server returned an unreadable response.");
+  }
+
+  if (response.status === 403 && data.code === "SUBSCRIPTION_REQUIRED") {
+    websiteConnectionsLocked = true;
+    showWebsiteSubscriptionLock();
+    throw new Error(data.error || "An active paid subscription is required to manage website connections.");
+  }
+
+  if (!response.ok) {
+    const error = new Error(data.error || data.message || "The website request failed.");
+    error.status = response.status;
+    error.code = data.code || "";
+    throw error;
+  }
+
+  return data;
+}
+
+function showWebsiteSubscriptionLock() {
+  $("websiteSubscriptionLock").hidden = false;
+  $("websiteConnectionContent").hidden = true;
+  $("websiteConnectionsList").innerHTML = "";
+  $("websiteVerificationDetails").hidden = true;
+
+  const empty = document.createElement("div");
+  empty.className = "connection-empty";
+  empty.textContent = "Website connections will become available when your paid subscription is active.";
+  $("websiteConnectionsList").appendChild(empty);
+
+  $("websiteConnectionStatus").textContent =
+    "Website management is currently locked because this workspace does not have an active paid subscription.";
+
+  $("websiteConnectionStatus").className = "connection-feedback";
+  $("refreshWebsitesButton").disabled = false;
+}
+
+function clearWebsiteSubscriptionLock() {
+  websiteConnectionsLocked = false;
+  $("websiteSubscriptionLock").hidden = true;
+  $("websiteConnectionContent").hidden = false;
+}
+
+function setWebsiteConnectionStatus(message,type = "") {
+  const status = $("websiteConnectionStatus");
+  status.textContent = message;
+  status.className = "connection-feedback" + (type ? " " + type : "");
+}
+
+function websiteStatusBadge(status) {
+  const badge = document.createElement("span");
+  const value = String(status || "pending").toLowerCase();
+
+  badge.className = "connection-badge";
+
+  if (value === "verified") {
+    badge.classList.add("verified");
+    badge.textContent = "Verified";
+  } else if (value === "pending") {
+    badge.classList.add("pending");
+    badge.textContent = "Pending verification";
+  } else {
+    badge.classList.add("failed");
+    badge.textContent = value.replace(/_/g," ");
+  }
+
+  return badge;
+}
+
+function formatWebsiteDate(value) {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleString();
+}
+
+function renderWebsiteConnections() {
+  const container = $("websiteConnectionsList");
+  container.innerHTML = "";
+
+  if (!websiteConnections.length) {
+    const empty = document.createElement("div");
+    empty.className = "connection-empty";
+    empty.textContent = "No websites have been connected to this workspace yet. Enter your website address above to get started.";
+    container.appendChild(empty);
+    return;
+  }
+
+  websiteConnections.forEach(website => {
+    const card = document.createElement("div");
+    card.className = "website-card";
+
+    const top = document.createElement("div");
+    top.className = "website-card-top";
+
+    const details = document.createElement("div");
+
+    const domain = document.createElement("div");
+    domain.className = "website-domain";
+    domain.textContent = website.domain || website.website_url || "Website";
+
+    const url = document.createElement("div");
+    url.className = "website-meta";
+    url.textContent = website.website_url || "";
+
+    details.appendChild(domain);
+    details.appendChild(url);
+
+    const verification = websiteStatusBadge(website.verification_status);
+
+    top.appendChild(details);
+    top.appendChild(verification);
+    card.appendChild(top);
+
+    const meta = document.createElement("div");
+    meta.className = "website-meta";
+
+    const installation = String(website.installation_status || "not_installed").replace(/_/g," ");
+
+    meta.textContent =
+      "Installation status: " + installation +
+      " · Last checked: " + formatWebsiteDate(website.last_checked_at);
+
+    card.appendChild(meta);
+
+    const actions = document.createElement("div");
+    actions.className = "website-actions";
+
+    if (website.verification_status !== "verified") {
+      const verifyButton = document.createElement("button");
+      verifyButton.className = "primary";
+      verifyButton.type = "button";
+      verifyButton.textContent = "Verify Website";
+      verifyButton.addEventListener("click",() => verifyWebsiteConnection(website.id,verifyButton));
+      actions.appendChild(verifyButton);
+    }
+
+    const detailsButton = document.createElement("button");
+    detailsButton.className = "secondary";
+    detailsButton.type = "button";
+    detailsButton.textContent = "Show DNS Instructions";
+    detailsButton.addEventListener("click",() => showSavedWebsiteInstructions(website));
+    actions.appendChild(detailsButton);
+
+    card.appendChild(actions);
+
+    const note = document.createElement("div");
+    note.className = "installation-note";
+    note.textContent = website.verification_status === "verified"
+      ? "Domain ownership verified. Chatbot installation has not been confirmed by this check."
+      : "Add the DNS TXT record before attempting verification.";
+
+    card.appendChild(note);
+    container.appendChild(card);
+  });
+}
+
+async function loadWebsiteConnections() {
+  if (websiteConnectionsBusy) return;
+
+  websiteConnectionsBusy = true;
+  $("refreshWebsitesButton").disabled = true;
+
+  setWebsiteConnectionStatus("Checking your website connection access...");
+
+  try {
+    const data = await websiteApiRequest("/api/website-connections",{
+      method:"GET"
+    });
+
+    clearWebsiteSubscriptionLock();
+
+    websiteConnections = Array.isArray(data.websites) ? data.websites : [];
+    renderWebsiteConnections();
+
+    setWebsiteConnectionStatus(
+      websiteConnections.length
+        ? "Loaded " + websiteConnections.length + " website connection(s)."
+        : "Your workspace is ready for website connections."
+    );
+
+  } catch (error) {
+    if (error.code === "SUBSCRIPTION_REQUIRED" || websiteConnectionsLocked) {
+      showWebsiteSubscriptionLock();
+    } else {
+      setWebsiteConnectionStatus("Could not load website connections: " + error.message,"error");
+    }
+  } finally {
+    websiteConnectionsBusy = false;
+    $("refreshWebsitesButton").disabled = false;
+  }
+}
+
+async function addWebsiteConnection() {
+  if (websiteConnectionsBusy || websiteConnectionsLocked) return;
+
+  const input = $("websiteUrlInput");
+  const button = $("addWebsiteButton");
+  const websiteUrl = input.value.trim();
+
+  if (!websiteUrl) {
+    setWebsiteConnectionStatus("Enter your website address first.","error");
+    input.focus();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Connecting...";
+  setWebsiteConnectionStatus("Creating your website connection and verification record...");
+
+  try {
+    const data = await websiteApiRequest("/api/website-connections",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({website_url:websiteUrl})
+    });
+
+    if (!data.success || !data.website) {
+      throw new Error(data.error || "The website connection could not be created.");
+    }
+
+    input.value = "";
+
+    if (data.verification) {
+      showWebsiteVerificationDetails(data.verification);
+    }
+
+    setWebsiteConnectionStatus(
+      data.message || "Website connection created. Add the DNS TXT record to verify domain ownership.",
+      "success"
+    );
+
+    await loadWebsiteConnections();
+
+  } catch (error) {
+    if (error.status === 409) {
+      setWebsiteConnectionStatus("This domain is already connected to your workspace. Refresh the list to see its current status.","error");
+    } else if (error.code !== "SUBSCRIPTION_REQUIRED") {
+      setWebsiteConnectionStatus("Could not connect website: " + error.message,"error");
+    }
+  } finally {
+    button.disabled = false;
+    button.textContent = "Connect Website";
+  }
+}
+
+function showWebsiteVerificationDetails(verification) {
+  latestVerificationDetails = verification;
+
+  $("dnsRecordType").textContent = verification.record_type || "TXT";
+  $("dnsRecordHost").textContent = verification.host || "_rivetflow-verification";
+  $("dnsRecordValue").textContent = verification.value || "";
+  $("dnsRecordExpiry").textContent = formatWebsiteDate(verification.expires_at);
+  $("dnsInstructions").textContent = verification.instructions ||
+    "Add the TXT record above to your domain's DNS settings, then return to RivetFlow and select Verify Website.";
+
+  $("websiteVerificationDetails").hidden = false;
+}
+
+function showSavedWebsiteInstructions(website) {
+  if (latestVerificationDetails && website.id === latestVerificationDetails.websiteId) {
+    showWebsiteVerificationDetails(latestVerificationDetails);
+    return;
+  }
+
+  setWebsiteConnectionStatus(
+    "The original DNS verification token is only displayed when it is returned by the server after a new connection request. If you no longer have the token, contact support for help with restarting verification."
+  );
+}
+
+function hideDnsDetails() {
+  $("websiteVerificationDetails").hidden = true;
+}
+
+async function copyDnsField(elementId) {
+  const value = $(elementId).textContent;
+
+  if (!value) {
+    setWebsiteConnectionStatus("There is no DNS value to copy.","error");
+    return;
+  }
+
+  try {
+    await copyWidgetText(value);
+    setWebsiteConnectionStatus("DNS record value copied successfully.","success");
+  } catch {
+    setWebsiteConnectionStatus("Copy failed. Select and copy the DNS value manually.","error");
+  }
+}
+
+async function verifyWebsiteConnection(websiteId,button) {
+  if (!websiteId || websiteConnectionsBusy || websiteConnectionsLocked) return;
+
+  websiteConnectionsBusy = true;
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Checking DNS...";
+  }
+
+  setWebsiteConnectionStatus("Checking the DNS TXT record for this website...");
+
+  try {
+    const data = await websiteApiRequest("/api/website-connections/verify",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({websiteId})
+    });
+
+    if (data.verified === true) {
+      setWebsiteConnectionStatus(
+        data.message || "Domain ownership successfully verified.",
+        "success"
+      );
+    } else {
+      setWebsiteConnectionStatus(
+        data.message || "The DNS TXT record was not found yet. Check the record and try again.",
+        "error"
+      );
+    }
+
+    await loadWebsiteConnections();
+
+  } catch (error) {
+    if (error.status === 410) {
+      setWebsiteConnectionStatus(
+        "Your verification token has expired. A new verification request is required.",
+        "error"
+      );
+    } else if (error.status === 404) {
+      setWebsiteConnectionStatus(
+        "The website or verification request could not be found. Refresh your connections and try again.",
+        "error"
+      );
+    } else if (error.code !== "SUBSCRIPTION_REQUIRED") {
+      setWebsiteConnectionStatus("Verification could not be completed: " + error.message,"error");
+    }
+  } finally {
+    websiteConnectionsBusy = false;
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Verify Website";
+    }
   }
 }
 
@@ -1637,6 +2117,7 @@ async function initializeDashboard() {
   displayProfile(DEFAULT_PROFILE);
   await loadBusinessProfile();
   await loadLeads();
+  await loadWebsiteConnections();
 }
 
 initializeDashboard();
