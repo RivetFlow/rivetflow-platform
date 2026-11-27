@@ -17,6 +17,31 @@ function cleanText(value, maxLength = 1000) {
   return value.trim().slice(0, maxLength);
 }
 
+async function hasPaidSubscriptionAccess(db, tenantId) {
+  const subscription = await db.prepare(`
+    SELECT status, current_period_end, grace_period_ends_at
+    FROM tenant_subscriptions
+    WHERE tenant_id = ?
+    LIMIT 1
+  `).bind(tenantId).first();
+
+  if (!subscription) return false;
+
+  const now = Date.now();
+
+  if (subscription.status === "active") {
+    const periodEnd = Date.parse(subscription.current_period_end || "");
+    return Number.isFinite(periodEnd) && periodEnd > now;
+  }
+
+  if (subscription.status === "past_due") {
+    const graceEnd = Date.parse(subscription.grace_period_ends_at || "");
+    return Number.isFinite(graceEnd) && graceEnd > now;
+  }
+
+  return false;
+}
+
 function parseList(value) {
   try {
     const parsed = JSON.parse(value || "[]");
@@ -76,6 +101,20 @@ export async function onRequestPost({ request, env }) {
     const access = await requireTenant(request, env);
 
     if (!access.ok) return access.response;
+
+    // Enforce paid subscription access before using the AI service.
+    const hasAccess = await hasPaidSubscriptionAccess(
+      env.DB,
+      access.tenantId
+    );
+
+    if (!hasAccess) {
+      return jsonResponse({
+        success: false,
+        error: "This business does not have an active subscription.",
+        code: "SUBSCRIPTION_REQUIRED",
+      }, 403);
+    }
 
     const body = await request.json();
     const leadId = cleanText(body.leadId, 100);
@@ -279,8 +318,6 @@ SALES CONVERSATION RULES:
   when the customer has already explained what they need.
 
 - Do not use empty sales language or exaggerated claims.
-
-- Be confident and helpful without sounding pushy.
 
 WRITING STYLE:
 
