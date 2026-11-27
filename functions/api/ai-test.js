@@ -1,3 +1,4 @@
+
 import { requireTenant } from "../_lib/tenant.js";
 
 const CORS_HEADERS = {
@@ -301,6 +302,36 @@ async function getPublicTenant(db, publicKey) {
      WHERE public_key = ?
      LIMIT 1`
   ).bind(publicKey).first();
+}
+
+// Public chatbot access requires a valid paid subscription.
+// An active subscription must have a future billing period end.
+// A past-due subscription is allowed only during its valid grace period.
+async function hasPaidSubscriptionAccess(db, tenantId) {
+  const subscription = await db.prepare(`
+    SELECT status, current_period_end, grace_period_ends_at
+    FROM tenant_subscriptions
+    WHERE tenant_id = ?
+    LIMIT 1
+  `).bind(tenantId).first();
+
+  if (!subscription) return false;
+
+  const now = Date.now();
+
+  if (subscription.status === "active") {
+    const periodEnd = Date.parse(subscription.current_period_end || "");
+
+    return Number.isFinite(periodEnd) && periodEnd > now;
+  }
+
+  if (subscription.status === "past_due") {
+    const graceEnd = Date.parse(subscription.grace_period_ends_at || "");
+
+    return Number.isFinite(graceEnd) && graceEnd > now;
+  }
+
+  return false;
 }
 
 async function getSavedProfile(db, tenant) {
@@ -838,6 +869,7 @@ export async function onRequestPost({ request, env }) {
     }
 
     // Private business-owner profile actions require a real login.
+    // These actions remain available without a paid subscription.
     if (body.action === "getProfile" || body.action === "saveProfile") {
       const access = await requireTenant(request, env);
 
@@ -857,6 +889,24 @@ export async function onRequestPost({ request, env }) {
       return jsonResponse(
         { success: false, error: "Business chatbot could not be found." },
         404
+      );
+    }
+
+    // Enforce paid access on the server before any AI usage,
+    // conversation writes or customer lead submissions.
+    const hasAccess = await hasPaidSubscriptionAccess(
+      env.DB,
+      tenant.id
+    );
+
+    if (!hasAccess) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "This business chatbot is currently unavailable.",
+          code: "SUBSCRIPTION_REQUIRED",
+        },
+        403
       );
     }
 
