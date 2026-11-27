@@ -50,7 +50,8 @@ function normalizeWebsite(value) {
     !hostname.includes(".") ||
     hostname === "localhost" ||
     hostname.endsWith(".localhost") ||
-    hostname.endsWith(".local")
+    hostname.endsWith(".local") ||
+    hostname.includes(":")
   ) {
     throw new Error("Enter a valid public website domain.");
   }
@@ -90,9 +91,9 @@ async function checkSubscription(db, tenantId) {
   const now = Date.now();
 
   if (subscription.status === "active") {
-    if (!subscription.current_period_end) return false;
-
-    const periodEnd = Date.parse(subscription.current_period_end);
+    const periodEnd = Date.parse(
+      subscription.current_period_end || ""
+    );
 
     return Number.isFinite(periodEnd) && periodEnd > now;
   }
@@ -125,6 +126,16 @@ async function getAuthorizedTenant(request, env) {
     return {
       ok: false,
       response: access.response,
+    };
+  }
+
+  if (access.role !== "owner") {
+    return {
+      ok: false,
+      response: jsonResponse({
+        success: false,
+        error: "Only the business owner can manage website connections.",
+      }, 403),
     };
   }
 
@@ -205,6 +216,13 @@ export async function onRequestPost({ request, env }) {
       }, 400);
     }
 
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return jsonResponse({
+        success: false,
+        error: "Invalid request data.",
+      }, 400);
+    }
+
     let website;
 
     try {
@@ -241,7 +259,7 @@ export async function onRequestPost({ request, env }) {
       Date.now() + 24 * 60 * 60 * 1000
     ).toISOString();
 
-    await env.DB.prepare(`
+    const websiteInsert = env.DB.prepare(`
       INSERT INTO website_connections (
         id,
         tenant_id,
@@ -262,9 +280,9 @@ export async function onRequestPost({ request, env }) {
       "pending",
       "not_installed",
       "dns_txt"
-    ).run();
+    );
 
-    await env.DB.prepare(`
+    const tokenInsert = env.DB.prepare(`
       INSERT INTO website_verification_tokens (
         id,
         tenant_id,
@@ -279,7 +297,12 @@ export async function onRequestPost({ request, env }) {
       websiteId,
       token,
       expiresAt
-    ).run();
+    );
+
+    await env.DB.batch([
+      websiteInsert,
+      tokenInsert,
+    ]);
 
     return jsonResponse({
       success: true,
